@@ -10,6 +10,8 @@ abstract: |
 permalink: /index.html
 ---
 
+# Ownership of this project has been transferred to @theohbrothers. Please go to https://github.com/theohbrothers/ConvertOneNote2MarkDown-v2 to get the most recent, and significantly improved, versions!
+
 Credit for this script goes to the wizard @SjoerdV who created the original script [here](https://github.com/SjoerdV/ConvertOneNote2MarkDown). I've taken it and made a variety of modifications and improvements.
 
 # Convert OneNote to MarkDown
