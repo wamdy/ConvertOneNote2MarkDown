@@ -205,12 +205,16 @@ Function ProcessSections ($group, $FilePath) {
                 Get-Content -path "$($fullfilepathwithoutextension).md"
             )
             $orig[0] = "# $($page.name)"
-            $insert1 = "$($page.dateTime)"
-            $insert1 = [Datetime]::ParseExact($insert1, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
-            $insert1 = $insert1.ToString("yyyy-MM-dd HH:mm:ss
-            ")
-            $insert2 = "---"
-            Set-Content -Path "$($fullfilepathwithoutextension).md" -Value $orig[0..0], $insert1, $insert2, $orig[6..($orig.Count - 1)]
+            if ($headerTimestampEnabled -eq 2) {
+                Set-Content -Path "$($fullfilepathwithoutextension).md" -Value $orig[0..0], $orig[6..($orig.Count - 1)]
+            }else {
+                $insert1 = "$($page.dateTime)"
+                $insert1 = [Datetime]::ParseExact($insert1, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
+                $insert1 = $insert1.ToString("yyyy-MM-dd HH:mm:ss
+                ")
+                $insert2 = "---"
+                Set-Content -Path "$($fullfilepathwithoutextension).md" -Value $orig[0..0], $insert1, $insert2, $orig[6..($orig.Count - 1)]
+            }
 
             #Clear double spaces from bullets and nonbreaking spaces from blank lines
             if ($keepspaces -eq 2 ) {
@@ -338,6 +342,12 @@ $targetNotebook = Read-Host -Prompt "Enter name of notebook"
 "5: markdown_phpextra (PHP Markdown Extra)"
 "6: markdown_strict (original unextended Markdown)"
 [int]$conversion = Read-Host -Prompt "Entry: "
+
+#prompt to include page timestamp and separator at the top of document
+"-----------------------------------------------"
+"1: Include page timestamp and separator at top of document - Default"
+"2: Do not include page timestamp and separator at top of document"
+[int]$headerTimestampEnabled = Read-Host -Prompt "Entry"
 
 #prompt to clear double spaces between bullets
 "-----------------------------------------------"

@@ -41,6 +41,7 @@ The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote 
    * markdown_phpextra (PHP Markdown Extra)
    * markdown_strict (original unextended Markdown)
 * See more details on these options here: https://pandoc.org/MANUAL.html#options
+* Allow to choose whether to include page timestamp and separator at top of document
 * Remove double spaces and "\" escape symbol that are created when converting with Pandoc
 * Improved file headers, with title now as a # heading, standardized DateTime format, and horizontal line to separate from rest of document
 
