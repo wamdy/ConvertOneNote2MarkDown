@@ -7,12 +7,20 @@ Function Remove-InvalidFileNameChars {
             Position = 0,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [string]$Name
+        [string]$Name,
+        [switch]$KeepPathSpaces
     )
 
-
     $newName = $Name.Split([IO.Path]::GetInvalidFileNameChars()) -join '-'
-    return (((($newName -replace "\s", "-") -replace "\[", "(") -replace "\]", ")").Substring(0, $(@{$true = 130; $false = $newName.length }[$newName.length -gt 150])))
+    $newName = $newName -replace "\[", "("
+    $newName = $newName -replace "\]", ")"
+    $newName =  if ($KeepPathSpaces) {
+                    $newName -replace "\s", " "
+                } else {
+                    $newName -replace "\s", "-"
+                }
+    $newName = $newName.Substring(0, $(@{$true = 130; $false = $newName.length }[$newName.length -gt 150]))
+    return $newName.Trim() # Remove boundary whitespaces
 }
 Function Remove-InvalidFileNameCharsInsertedFiles {
     param(
@@ -22,21 +30,27 @@ Function Remove-InvalidFileNameCharsInsertedFiles {
             ValueFromPipelineByPropertyName = $true)]
         [string]$Name,
         [string]$Replacement = "",
-        [string]$SpecialChars = "#$%^*[]'<>!@{};"
-
+        [string]$SpecialChars = "#$%^*[]'<>!@{};",
+        [switch]$KeepPathSpaces
     )
 
     $rePattern = ($SpecialChars.ToCharArray() | ForEach-Object { [regex]::Escape($_) }) -join "|"
 
     $newName = $Name.Split([IO.Path]::GetInvalidFileNameChars()) -join '-'
-    return ($newName -replace $rePattern, "" -replace "\s", "-")
+    $newName = $newName -replace $rePattern, ""
+    $newName =  if ($KeepPathSpaces) {
+                    $newName -replace "\s", " "
+                } else {
+                    $newName -replace "\s", "-"
+                }
+    return $newName.Trim() # Remove boundary whitespaces
 }
 
 Function ProcessSections ($group, $FilePath) {
     foreach ($section in $group.Section) {
         "--------------" | Write-Host
         "### " + $section.Name | Write-Host
-        $sectionFileName = "$($section.Name)" | Remove-InvalidFileNameChars
+        $sectionFileName = "$($section.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
         $item = New-Item -Path "$($FilePath)" -Name "$($sectionFileName)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
         "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
         [int]$previouspagelevel = 1
@@ -52,7 +66,7 @@ Function ProcessSections ($group, $FilePath) {
             $pageid = ""
             $pageid = $page.ID
             $pagename = ""
-            $pagename = $page.name | Remove-InvalidFileNameChars
+            $pagename = $page.name | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
             $fullexportdirpath = ""
             $fullexportdirpath = "$($FilePath)\$($sectionFileName)"
             $fullfilepathwithoutextension = ""
@@ -181,7 +195,7 @@ Function ProcessSections ($group, $FilePath) {
                 "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host | Out-Null
                 $destfilename = ""
                 try {
-                    $destfilename = $pageinsertedfile.InsertedFile.preferredName | Remove-InvalidFileNameCharsInsertedFiles
+                    $destfilename = $pageinsertedfile.InsertedFile.preferredName | Remove-InvalidFileNameCharsInsertedFiles -KeepPathSpaces:($keepPathSpaces -eq 2)
                     Copy-Item -Path "$($pageinsertedfile.InsertedFile.pathCache)" -Destination "$($mediaPath)\media\$($destfilename)" -Force
                 }
                 catch {
@@ -357,9 +371,15 @@ $targetNotebook = Read-Host -Prompt "Enter name of notebook"
 
 # prompt to clear escape symbols from md files
 "-----------------------------------------------"
-"1: Clear '\' symbol escape character from files"
+"1: Clear '\' symbol escape character from files - Default"
 "2: Keep '\' symbol escape"
 [int] $keepescape = Read-Host -Prompt "Entry"
+
+#prompt to replace spaces with dashes in file
+"-----------------------------------------------"
+"1: Replace spaces with dashes i.e. '-' in file and folder names - Default"
+"2: Keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces)"
+[int]$keepPathSpaces = Read-Host -Prompt "Entry"
 
 # Fix encoding problems for languages other than English
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
@@ -407,7 +427,7 @@ try {
     foreach ($notebook in $notebooks) {
         " " | Write-Host
         $notebook.Name | Write-Host
-        $notebookFileName = "$($notebook.Name)" | Remove-InvalidFileNameChars
+        $notebookFileName = "$($notebook.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
         $item = New-Item -Path "$($notesdestpath)\" -Name "$($notebookFileName)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
         "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
         $NotebookFilePath = "$($notesdestpath)\$($notebookFileName)"
@@ -425,7 +445,7 @@ try {
             $levelsfromroot = 1
             if ($sectiongroup1.isRecycleBin -ne 'true') {
                 "# " + $sectiongroup1.Name | Write-Host
-                $sectiongroupFileName1 = "$($sectiongroup1.Name)" | Remove-InvalidFileNameChars
+                $sectiongroupFileName1 = "$($sectiongroup1.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
                 $item = New-Item -Path "$($notesdestpath)\$($notebookFileName)" -Name "$($sectiongroupFileName1)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
                 "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host | Out-Null
                 $sectiongroupFilePath1 = "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)"
@@ -436,7 +456,7 @@ try {
                     $levelsfromroot = 2
                     if ($sectiongroup2.isRecycleBin -ne 'true') {
                         "## " + $sectiongroup2.Name | Write-Host
-                        $sectiongroupFileName2 = "$($sectiongroup2.Name)" | Remove-InvalidFileNameChars
+                        $sectiongroupFileName2 = "$($sectiongroup2.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
                         $item = New-Item -Path "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)" -Name "$($sectiongroupFileName2)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
                         "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
                         $sectiongroupFilePath2 = "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)"
@@ -447,7 +467,7 @@ try {
                             $levelsfromroot = 3
                             if ($sectiongroup3.isRecycleBin -ne 'true') {
                                 "### " + $sectiongroup3.Name | Write-Host
-                                $sectiongroupFileName3 = "$($sectiongroup3.Name)" | Remove-InvalidFileNameChars
+                                $sectiongroupFileName3 = "$($sectiongroup3.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
                                 $item = New-Item -Path "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)" -Name "$($sectiongroupFileName3)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
                                 "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
                                 $sectiongroupFilePath3 = "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)"
@@ -458,7 +478,7 @@ try {
                                     $levelsfromroot = 4
                                     if ($sectiongroup4.isRecycleBin -ne 'true') {
                                         "#### " + $sectiongroup4.Name | Write-Host
-                                        $sectiongroupFileName4 = "$($sectiongroup4.Name)" | Remove-InvalidFileNameChars
+                                        $sectiongroupFileName4 = "$($sectiongroup4.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
                                         $item = New-Item -Path "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)" -Name "$($sectiongroupFileName4)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
                                         "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
                                         $sectiongroupFilePath4 = "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)"
@@ -469,7 +489,7 @@ try {
                                             $levelsfromroot = 5
                                             if ($sectiongroup5.isRecycleBin -ne 'true') {
                                                 "#### " + $sectiongroup5.Name | Write-Host
-                                                $sectiongroupFileName5 = "$($sectiongroup5.Name)" | Remove-InvalidFileNameChars
+                                                $sectiongroupFileName5 = "$($sectiongroup5.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
                                                 $item = New-Item -Path "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)" -Name "$($sectiongroupFileName5)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
                                                 "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
                                                 $sectiongroupFilePath5 = "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)\$($sectiongroupFileName5)"
