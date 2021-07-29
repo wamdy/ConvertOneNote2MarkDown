@@ -43,6 +43,7 @@ The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote 
 * See more details on these options here: https://pandoc.org/MANUAL.html#options
 * Allow to choose whether to include page timestamp and separator at top of document
 * Remove double spaces and "\" escape symbol that are created when converting with Pandoc
+* Allow to choose whether to keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces).
 * Improved file headers, with title now as a # heading, standardized DateTime format, and horizontal line to separate from rest of document
 
 ## Known Issues
