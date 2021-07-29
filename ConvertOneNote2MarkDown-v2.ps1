@@ -421,7 +421,11 @@ try {
         }
     )
     if ($notebooks.Count -eq 0) {
-        throw "Could not find notebook of name '$targetNotebook'"
+        if ($targetNotebook) {
+            throw "Could not find notebook of name '$targetNotebook'"
+        }else {
+            throw "Could not find notebooks"
+        }
     }
 
     foreach ($notebook in $notebooks) {
