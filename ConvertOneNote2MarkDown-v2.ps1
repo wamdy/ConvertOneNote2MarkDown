@@ -201,14 +201,16 @@ Function ProcessSections ($group, $FilePath) {
             }
 
             # add YAML
-            $orig = Get-Content -path "$($fullfilepathwithoutextension).md"
+            $orig = @(
+                Get-Content -path "$($fullfilepathwithoutextension).md"
+            )
             $orig[0] = "# $($page.name)"
             $insert1 = "$($page.dateTime)"
             $insert1 = [Datetime]::ParseExact($insert1, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
             $insert1 = $insert1.ToString("yyyy-MM-dd HH:mm:ss
             ")
             $insert2 = "---"
-            Set-Content -Path "$($fullfilepathwithoutextension).md" -Value $orig[0..0], $insert1, $insert2, $orig[6..$orig.Length]
+            Set-Content -Path "$($fullfilepathwithoutextension).md" -Value $orig[0..0], $insert1, $insert2, $orig[6..($orig.Count - 1)]
 
             #Clear double spaces from bullets and nonbreaking spaces from blank lines
             if ($keepspaces -eq 2 ) {
