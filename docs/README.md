@@ -26,6 +26,7 @@ The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote 
 
 * Create a **folder structure** for your Notebooks and Sections
 * Process pages that are in sections at the **Notebook, Section Group and up to 5 Nested Section Group levels**
+* Allow you to choose between **converting a specific notebook or all notebooks**
 * Allow you to **choose between creating subfolders for subpages** (e.g. Page\Subpage.md) or **appending prefixes** (e.g. Page_Subpage.md)
 * Allow you you choose between putting all **Images** in a central '/media' folder for each notebook, or in a separate '/media' folder in each folder of the hierarchy
 * Fix image references in the resulting .md files, generating *relative* references to the image files within the markdown document
