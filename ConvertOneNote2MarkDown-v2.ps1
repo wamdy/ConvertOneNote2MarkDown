@@ -283,7 +283,7 @@ Function ProcessSections ($group, $FilePath) {
 ""
 "-----------------------------------------------"
 # ask for the Notes root path
-"Enter the (preferably empty!) folder path (without trailing backslash!) that will contain your resulting Notes structure. ex. 'c:\temp\notes'"
+"Enter the (preferably empty!) folder path that will contain your resulting Notes structure. ex. 'c:\temp\notes'"
 $notesdestpath = Read-Host -Prompt "Entry"
 ""
 "-----------------------------------------------"
@@ -353,6 +353,7 @@ else { $converter = "markdown" }
 "2: Keep '\' symbol escape"
 [int] $keepescape = Read-Host -Prompt "Entry"
 
+$notesdestpath = $notesdestpath.Trim('\')
 
 if (Test-Path -Path $notesdestpath) {
     # open OneNote hierarchy
