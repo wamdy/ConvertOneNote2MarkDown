@@ -1,5 +1,5 @@
 ---
-title:  'Convert OneNote to MarkDown'
+title:  DEPRECATED  'Convert OneNote to MarkDown'
 author:
 - Sjoerd de Valk, SPdeValk Consultancy
 - modified by nixsee, a guy
