@@ -1,8 +1,9 @@
 ---
-title:  DEPRECATED  'Convert OneNote to MarkDown'
+title:  'Convert OneNote to MarkDown'
 author:
 - Sjoerd de Valk, SPdeValk Consultancy
-- modified by nixsee, a guy, @theohbrothers
+- modified by nixsee, a guy
+- modified by The Oh Brothers
 date: 2020-07-15 13:00:00
 keywords: [migration, tooling, onenote, markdown, powershell]
 abstract: |
@@ -10,9 +11,7 @@ abstract: |
 permalink: /index.html
 ---
 
-# :no_entry: [DEPRECATED] Ownership of this project has been transferred to @theohbrothers. Please go to https://github.com/theohbrothers/ConvertOneNote2MarkDown-v2 to get the most recent, and significantly improved, versions!
-
-Credit for this script goes to the wizard @SjoerdV who created the original script [here](https://github.com/SjoerdV/ConvertOneNote2MarkDown). I've taken it and made a variety of modifications and improvements.
+Credit for this script goes to the wizard [@SjoerdV](https://github.com/SjoerdV) who created the original script [here](https://github.com/SjoerdV/ConvertOneNote2MarkDown). [@nixsee](https://github.com/nixsee) then made a variety of modifications and improvements on his fork. The fork was transferred to and is now maintained by [@theohbrothers](https://github.com/theohbrothers).
 
 # Convert OneNote to MarkDown
 
