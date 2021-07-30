@@ -299,83 +299,89 @@ Function ProcessSections ($group, $FilePath) {
     }
 }
 
-""
-"-----------------------------------------------"
-# ask for the Notes root path
-"Enter the folder path that will contain your resulting Notes structure. ex. 'c:\temp\notes'"
-$notesdestpath = Read-Host -Prompt "Entry"
-""
-"-----------------------------------------------"
+# If a ./config.ps1 is found, use that as configuration. Else use interactive configuration.
+if (Test-Path $PSScriptRoot/config.ps1) {
+    . $PSScriptRoot/config.ps1
+}else {
+    ""
+    "-----------------------------------------------"
+    # ask for the Notes root path
+    "Enter the folder path that will contain your resulting Notes structure. ex. 'c:\temp\notes'"
+    $notesdestpath = Read-Host -Prompt "Entry"
+    ""
+    "-----------------------------------------------"
 
-#prompt for notebook
-""
-"-----------------------------------------------"
-"'': Convert all notebooks - Default"
-"'mynotebook': Convert specific notebook named 'mynotebook'"
-$targetNotebook = Read-Host -Prompt "Enter name of notebook"
+    #prompt for notebook
+    ""
+    "-----------------------------------------------"
+    "'': Convert all notebooks - Default"
+    "'mynotebook': Convert specific notebook named 'mynotebook'"
+    $targetNotebook = Read-Host -Prompt "Enter name of notebook"
 
-#prompt to use existing word docs (90% faster)
-""
-"-----------------------------------------------"
-"1: Create new .docx files - Default"
-"2: Use existing .docx files (90% faster)"
-[int] $usedocx = Read-Host -Prompt "Entry"
+    #prompt to use existing word docs (90% faster)
+    ""
+    "-----------------------------------------------"
+    "1: Create new .docx files - Default"
+    "2: Use existing .docx files (90% faster)"
+    [int] $usedocx = Read-Host -Prompt "Entry"
 
-#prompt to discard intermediate word docs
-""
-"-----------------------------------------------"
-"1: Discard intermediate .docx files - Default"
-"2: Keep .docx files"
-[int] $keepdocx = Read-Host -Prompt "Entry"
-""
-"-----------------------------------------------"
-# prompt for prefix vs subfolders
-"1: Create folders for subpages (e.g. Page\Subpage.md)- Default"
-"2: Add prefixes for subpages (e.g. Page_Subpage.md)"
-[Int]$prefixFolders = Read-Host -Prompt "Entry"
+    #prompt to discard intermediate word docs
+    ""
+    "-----------------------------------------------"
+    "1: Discard intermediate .docx files - Default"
+    "2: Keep .docx files"
+    [int] $keepdocx = Read-Host -Prompt "Entry"
+    ""
+    "-----------------------------------------------"
+    # prompt for prefix vs subfolders
+    "1: Create folders for subpages (e.g. Page\Subpage.md)- Default"
+    "2: Add prefixes for subpages (e.g. Page_Subpage.md)"
+    [Int]$prefixFolders = Read-Host -Prompt "Entry"
 
-#prompt for media in single or multiple folders
-""
-"-----------------------------------------------"
-"1: Images stored in single 'media' folder at Notebook-level (Default)"
-"2: Separate 'media' folder for each folder in the hierarchy"
-[int] $medialocation = Read-Host -Prompt "Entry"
+    #prompt for media in single or multiple folders
+    ""
+    "-----------------------------------------------"
+    "1: Images stored in single 'media' folder at Notebook-level (Default)"
+    "2: Separate 'media' folder for each folder in the hierarchy"
+    [int] $medialocation = Read-Host -Prompt "Entry"
 
-#prompt for conversion type
-""
-"Select conversion type"
-"-----------------------------------------------"
-"1: markdown (Pandoc) - Default"
-"2: commonmark (CommonMark Markdown)"
-"3: gfm (GitHub-Flavored Markdown)"
-"4: markdown_mmd (MultiMarkdown)"
-"5: markdown_phpextra (PHP Markdown Extra)"
-"6: markdown_strict (original unextended Markdown)"
-[int]$conversion = Read-Host -Prompt "Entry: "
+    #prompt for conversion type
+    ""
+    "Select conversion type"
+    "-----------------------------------------------"
+    "1: markdown (Pandoc) - Default"
+    "2: commonmark (CommonMark Markdown)"
+    "3: gfm (GitHub-Flavored Markdown)"
+    "4: markdown_mmd (MultiMarkdown)"
+    "5: markdown_phpextra (PHP Markdown Extra)"
+    "6: markdown_strict (original unextended Markdown)"
+    [int]$conversion = Read-Host -Prompt "Entry: "
 
-#prompt to include page timestamp and separator at the top of document
-"-----------------------------------------------"
-"1: Include page timestamp and separator at top of document - Default"
-"2: Do not include page timestamp and separator at top of document"
-[int]$headerTimestampEnabled = Read-Host -Prompt "Entry"
+    #prompt to include page timestamp and separator at the top of document
+    "-----------------------------------------------"
+    "1: Include page timestamp and separator at top of document - Default"
+    "2: Do not include page timestamp and separator at top of document"
+    [int]$headerTimestampEnabled = Read-Host -Prompt "Entry"
 
-#prompt to clear double spaces between bullets
-"-----------------------------------------------"
-"1: Clear double spaces in bullets - Default"
-"2: Keep double spaces"
-[int] $keepspaces = Read-Host -Prompt "Entry"
+    #prompt to clear double spaces between bullets
+    "-----------------------------------------------"
+    "1: Clear double spaces in bullets - Default"
+    "2: Keep double spaces"
+    [int] $keepspaces = Read-Host -Prompt "Entry"
 
-# prompt to clear escape symbols from md files
-"-----------------------------------------------"
-"1: Clear '\' symbol escape character from files - Default"
-"2: Keep '\' symbol escape"
-[int] $keepescape = Read-Host -Prompt "Entry"
+    # prompt to clear escape symbols from md files
+    "-----------------------------------------------"
+    "1: Clear '\' symbol escape character from files - Default"
+    "2: Keep '\' symbol escape"
+    [int] $keepescape = Read-Host -Prompt "Entry"
 
-#prompt to replace spaces with dashes in file
-"-----------------------------------------------"
-"1: Replace spaces with dashes i.e. '-' in file and folder names - Default"
-"2: Keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces)"
-[int]$keepPathSpaces = Read-Host -Prompt "Entry"
+    #prompt to replace spaces with dashes in file
+    "-----------------------------------------------"
+    "1: Replace spaces with dashes i.e. '-' in file and folder names - Default"
+    "2: Keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces)"
+    [int]$keepPathSpaces = Read-Host -Prompt "Entry"
+
+}
 
 # Fix encoding problems for languages other than English
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
