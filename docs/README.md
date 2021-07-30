@@ -207,5 +207,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## Credits
+
 * Avi Aryan for the awesome [VSCodeNotebook](https://github.com/aviaryan/VSCodeNotebook) port
-* @SjoerdV for the original script
+* @SjoerdV for the [original script](https://github.com/SjoerdV/ConvertOneNote2MarkDown)
+* @nixsee, the original owner of the present fork who made a variety of improvements and fixes
