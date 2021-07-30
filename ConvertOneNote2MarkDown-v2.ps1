@@ -403,7 +403,13 @@ try {
     else { $converter = "markdown" }
 
     # Open OneNote hierarchy
-    $OneNote = New-Object -ComObject OneNote.Application
+    if ($PSVersionTable.PSVersion.Major -le 5) {
+        $OneNote = New-Object -ComObject OneNote.Application
+    }else {
+        # Works between powershell 6.0 and 7.0, but not >= 7.1
+        Add-Type -Path $env:windir\assembly\GAC_MSIL\Microsoft.Office.Interop.OneNote\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.OneNote.dll # -PassThru
+        $OneNote = [Microsoft.Office.Interop.OneNote.ApplicationClass]::new()
+    }
     [xml]$Hierarchy = ""
     $totalerr = ""
     $OneNote.GetHierarchy("", [Microsoft.Office.InterOp.OneNote.HierarchyScope]::hsPages, [ref]$Hierarchy)
