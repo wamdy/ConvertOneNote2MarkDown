@@ -121,13 +121,13 @@ Function ProcessSections ($group, $FilePath) {
 
             # set media location (central media folder at notebook-level or adjacent to .md file) based on initial user prompt
             if ($medialocation -eq 2) {
-                $mediaPath = $fullexportdirpath
+                $mediaPath = $fullexportdirpath.Replace('\', '/') # Normalize markdown media paths to use front slashes, i.e. '/'
                 $levelsprefix = ""
             }
             else {
-                $mediaPath = $NotebookFilePath
+                $mediaPath = $NotebookFilePath.Replace('\', '/') # Normalize markdown media paths to use front slashes, i.e. '/'
             }
-            $mediaPath2 = $mediaPath.Substring(0, 1).toupper() + $mediaPath.Substring(1)
+            $mediaPath = ($mediaPath.Substring(0, 1).tolower() + $mediaPath.Substring(1)).Replace('\', '/') # Normalize markdown media paths to use front slashes, i.e. '/'
 
             # in case multiple pages with the same name exist in a section, postfix the filename. Run after pages
             if ([System.IO.File]::Exists("$($fullfilepathwithoutextension).md")) {
@@ -202,7 +202,7 @@ Function ProcessSections ($group, $FilePath) {
                 # Change MD file Object Name References
                 try {
                     $pageinsertedfile2 = $pageinsertedfile.InsertedFile.preferredName.Replace("$", "\$").Replace("^", "\^").Replace("'", "\'")
-                    ((Get-Content -path "$($fullfilepathwithoutextension).md" -Raw).Replace("$($pageinsertedfile2)", "[$($destfilename)]($($mediaPath2)\media\$($destfilename))")) | Set-Content -Path "$($fullfilepathwithoutextension).md"
+                    ((Get-Content -path "$($fullfilepathwithoutextension).md" -Raw).Replace("$($pageinsertedfile2)", "[$($destfilename)]($($mediaPath2)/media/$($destfilename))")) | Set-Content -Path "$($fullfilepathwithoutextension).md"
 
                 }
                 catch {
@@ -268,9 +268,9 @@ Function ProcessSections ($group, $FilePath) {
             # change MD file Image Path References
             try {
                 # Change MD file Image Path References in Markdown
-                ((Get-Content -path "$($fullfilepathwithoutextension).md" -Raw).Replace("$($mediaPath2)\media\", "$($levelsprefix)/media/")) | Set-Content -Path "$($fullfilepathwithoutextension).md"
+                ((Get-Content -path "$($fullfilepathwithoutextension).md" -Raw).Replace("$($mediaPath)/media/", "$($levelsprefix)/media/")) | Set-Content -Path "$($fullfilepathwithoutextension).md"
                 # Change MD file Image Path References in HTML
-                ((Get-Content -path "$($fullfilepathwithoutextension).md" -Raw).Replace("$($mediaPath2)", "$($levelsprefix)")) | Set-Content -Path "$($fullfilepathwithoutextension).md"
+                ((Get-Content -path "$($fullfilepathwithoutextension).md" -Raw).Replace("$($mediaPath)", "$($levelsprefix)")) | Set-Content -Path "$($fullfilepathwithoutextension).md"
             }
             catch {
                 Write-Host "Error while renaming image file path references for file '$($page.name)': $($Error[0].ToString())" -ForegroundColor Red
