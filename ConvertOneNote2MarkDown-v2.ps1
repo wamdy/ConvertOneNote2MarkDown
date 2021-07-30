@@ -221,9 +221,8 @@ Function ProcessSections ($group, $FilePath) {
             }else {
                 $insert1 = "$($page.dateTime)"
                 $insert1 = [Datetime]::ParseExact($insert1, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
-                $insert1 = $insert1.ToString("yyyy-MM-dd HH:mm:ss
-                ")
-                $insert2 = "---"
+                $insert1 = $insert1.ToString("`nyyyy-MM-dd HH:mm:ss")
+                $insert2 = "`n---"
                 Set-Content -Path "$($fullfilepathwithoutextension).md" -Value $orig[0..0], $insert1, $insert2, $orig[6..($orig.Count - 1)]
             }
 
