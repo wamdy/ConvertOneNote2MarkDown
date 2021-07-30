@@ -402,6 +402,11 @@ try {
     elseif ($conversion -eq 6) { $converter = "markdown_strict" }
     else { $converter = "markdown" }
 
+    # Validate assemblies
+    if ( ($env:OS -imatch 'Windows') -and ! (Get-Item -Path $env:windir\assembly\GAC_MSIL\*onenote*) ) {
+        "There are missing onenote assemblies. Please install the Desktop version of Onenote 2016 or above." | Write-Warning
+    }
+
     # Open OneNote hierarchy
     if ($PSVersionTable.PSVersion.Major -le 5) {
         $OneNote = New-Object -ComObject OneNote.Application
