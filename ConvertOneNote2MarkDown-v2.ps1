@@ -127,7 +127,7 @@ Function ProcessSections ($group, $FilePath) {
             else {
                 $mediaPath = $NotebookFilePath.Replace('\', '/') # Normalize markdown media paths to use front slashes, i.e. '/'
             }
-            $mediaPath = ($mediaPath.Substring(0, 1).tolower() + $mediaPath.Substring(1)).Replace('\', '/') # Normalize markdown media paths to use front slashes, i.e. '/'
+            $mediaPath = $mediaPath.Substring(0, 1).tolower() + $mediaPath.Substring(1) # Normalize markdown media paths to use a lowercased drive letter
 
             # in case multiple pages with the same name exist in a section, postfix the filename. Run after pages
             if ([System.IO.File]::Exists("$($fullfilepathwithoutextension).md")) {
@@ -386,7 +386,7 @@ try {
     if (! (Test-Path -Path $notesdestpath -PathType Container -ErrorAction SilentlyContinue) ) {
         throw "Notes root path does not exist: $notesdestpath"
     }
-    $notesdestpath = $notesdestpath.Trim('\')
+    $notesdestpath = $notesdestpath.Trim('/').Trim('\') # Normalize notes paths to have no trailing slash or backslashes
 
     if ($prefixFolders -eq 2) {
         $prefixFolders = 2
