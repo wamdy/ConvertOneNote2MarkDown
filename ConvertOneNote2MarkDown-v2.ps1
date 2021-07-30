@@ -303,84 +303,75 @@ Function ProcessSections ($group, $FilePath) {
 if (Test-Path $PSScriptRoot/config.ps1) {
     . $PSScriptRoot/config.ps1
 }else {
-    ""
-    "-----------------------------------------------"
-    # ask for the Notes root path
-    "Enter the folder path that will contain your resulting Notes structure. ex. 'c:\temp\notes'"
-    $notesdestpath = Read-Host -Prompt "Entry"
-    ""
-    "-----------------------------------------------"
+    "" | Write-Host -ForegroundColor Cyan
+    "Specify folder path that will contain your resulting Notes structure. ex. 'c:\temp\notes'" | Write-Host -ForegroundColor Cyan
+    do {
+        $notesdestpath = Read-Host -Prompt "Entry"
+    }while(!$notesdestpath)
 
-    #prompt for notebook
-    ""
-    "-----------------------------------------------"
-    "'': Convert all notebooks - Default"
-    "'mynotebook': Convert specific notebook named 'mynotebook'"
+    "" | Write-Host -ForegroundColor Cyan
+    "Specify a notebook name to convert" | Write-Host -ForegroundColor Cyan
+    "'': Convert all notebooks - Default" | Write-Host -ForegroundColor Cyan
+    "'mynotebook': Convert specific notebook named 'mynotebook'" | Write-Host -ForegroundColor Cyan
     $targetNotebook = Read-Host -Prompt "Enter name of notebook"
 
-    #prompt to use existing word docs (90% faster)
-    ""
-    "-----------------------------------------------"
-    "1: Create new .docx files - Default"
-    "2: Use existing .docx files (90% faster)"
-    [int] $usedocx = Read-Host -Prompt "Entry"
+    "" | Write-Host -ForegroundColor Cyan
+    "Whether to create new word docs or reuse existing ones" | Write-Host -ForegroundColor Cyan
+    "1: Always create new .docx files - Default" | Write-Host -ForegroundColor Cyan
+    "2: Use existing .docx files (90% faster)" | Write-Host -ForegroundColor Cyan
+    [int]$usedocx = Read-Host -Prompt "Entry"
 
-    #prompt to discard intermediate word docs
-    ""
-    "-----------------------------------------------"
-    "1: Discard intermediate .docx files - Default"
-    "2: Keep .docx files"
-    [int] $keepdocx = Read-Host -Prompt "Entry"
-    ""
-    "-----------------------------------------------"
-    # prompt for prefix vs subfolders
-    "1: Create folders for subpages (e.g. Page\Subpage.md)- Default"
-    "2: Add prefixes for subpages (e.g. Page_Subpage.md)"
+    "" | Write-Host -ForegroundColor Cyan
+    "Whether to discard word docs after conversion" | Write-Host -ForegroundColor Cyan
+    "1: Discard .docx files - Default" | Write-Host -ForegroundColor Cyan
+    "2: Keep .docx files" | Write-Host -ForegroundColor Cyan
+    [int]$keepdocx = Read-Host -Prompt "Entry"
+
+    "" | Write-Host -ForegroundColor Cyan
+    "Whether to use prefix vs subfolders" | Write-Host -ForegroundColor Cyan
+    "1: Create folders for subpages (e.g. Page\Subpage.md) - Default" | Write-Host -ForegroundColor Cyan
+    "2: Add prefixes for subpages (e.g. Page_Subpage.md)" | Write-Host -ForegroundColor Cyan
     [Int]$prefixFolders = Read-Host -Prompt "Entry"
 
-    #prompt for media in single or multiple folders
-    ""
-    "-----------------------------------------------"
-    "1: Images stored in single 'media' folder at Notebook-level (Default)"
-    "2: Separate 'media' folder for each folder in the hierarchy"
-    [int] $medialocation = Read-Host -Prompt "Entry"
+    "" | Write-Host -ForegroundColor Cyan
+    "Whether to store media in single or multiple folders" | Write-Host -ForegroundColor Cyan
+    "1: Images stored in single 'media' folder at Notebook-level (Default)" | Write-Host -ForegroundColor Cyan
+    "2: Separate 'media' folder for each folder in the hierarchy" | Write-Host -ForegroundColor Cyan
+    [int]$medialocation = Read-Host -Prompt "Entry"
 
-    #prompt for conversion type
-    ""
-    "Select conversion type"
-    "-----------------------------------------------"
-    "1: markdown (Pandoc) - Default"
-    "2: commonmark (CommonMark Markdown)"
-    "3: gfm (GitHub-Flavored Markdown)"
-    "4: markdown_mmd (MultiMarkdown)"
-    "5: markdown_phpextra (PHP Markdown Extra)"
-    "6: markdown_strict (original unextended Markdown)"
+    "" | Write-Host -ForegroundColor Cyan
+    "Specify conversion type" | Write-Host -ForegroundColor Cyan
+    "1: markdown (Pandoc) - Default" | Write-Host -ForegroundColor Cyan
+    "2: commonmark (CommonMark Markdown)" | Write-Host -ForegroundColor Cyan
+    "3: gfm (GitHub-Flavored Markdown)" | Write-Host -ForegroundColor Cyan
+    "4: markdown_mmd (MultiMarkdown)" | Write-Host -ForegroundColor Cyan
+    "5: markdown_phpextra (PHP Markdown Extra)" | Write-Host -ForegroundColor Cyan
+    "6: markdown_strict (original unextended Markdown)" | Write-Host -ForegroundColor Cyan
     [int]$conversion = Read-Host -Prompt "Entry: "
 
-    #prompt to include page timestamp and separator at the top of document
-    "-----------------------------------------------"
-    "1: Include page timestamp and separator at top of document - Default"
-    "2: Do not include page timestamp and separator at top of document"
+    "" | Write-Host -ForegroundColor Cyan
+    "Whether to include page timestamp and separator at top of document" | Write-Host -ForegroundColor Cyan
+    "1: Include - Default" | Write-Host -ForegroundColor Cyan
+    "2: Don't include" | Write-Host -ForegroundColor Cyan
     [int]$headerTimestampEnabled = Read-Host -Prompt "Entry"
 
-    #prompt to clear double spaces between bullets
-    "-----------------------------------------------"
-    "1: Clear double spaces in bullets - Default"
-    "2: Keep double spaces"
-    [int] $keepspaces = Read-Host -Prompt "Entry"
+    "" | Write-Host -ForegroundColor Cyan
+    "Whether to clear double spaces between bullets" | Write-Host -ForegroundColor Cyan
+    "1: Clear double spaces in bullets - Default" | Write-Host -ForegroundColor Cyan
+    "2: Keep double spaces" | Write-Host -ForegroundColor Cyan
+    [int]$keepspaces = Read-Host -Prompt "Entry"
 
-    # prompt to clear escape symbols from md files
-    "-----------------------------------------------"
-    "1: Clear '\' symbol escape character from files - Default"
-    "2: Keep '\' symbol escape"
-    [int] $keepescape = Read-Host -Prompt "Entry"
+    "" | Write-Host -ForegroundColor Cyan
+    "Whether to clear escape symbols from md files" | Write-Host -ForegroundColor Cyan
+    "1: Clear '\' symbol escape character from files - Default" | Write-Host -ForegroundColor Cyan
+    "2: Keep '\' symbol escape" | Write-Host -ForegroundColor Cyan
+    [int]$keepescape = Read-Host -Prompt "Entry"
 
-    #prompt to replace spaces with dashes in file
-    "-----------------------------------------------"
-    "1: Replace spaces with dashes i.e. '-' in file and folder names - Default"
-    "2: Keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces)"
+    "" | Write-Host -ForegroundColor Cyan
+    "Whether to replace spaces with dashes i.e. '-' in file and folder names" | Write-Host -ForegroundColor Cyan
+    "1: Replace spaces with dashes in file and folder names - Default" | Write-Host -ForegroundColor Cyan
+    "2: Keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces)" | Write-Host -ForegroundColor Cyan
     [int]$keepPathSpaces = Read-Host -Prompt "Entry"
-
 }
 
 # Fix encoding problems for languages other than English
