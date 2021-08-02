@@ -1,5 +1,253 @@
+[CmdletBinding()]
+param ()
+
+Function Validate-Dependencies {
+    [CmdletBinding()]
+    param ()
+
+    # Validate assemblies
+    if ( ($env:OS -imatch 'Windows') -and ! (Get-Item -Path $env:windir\assembly\GAC_MSIL\*onenote*) ) {
+        "There are missing onenote assemblies. Please ensure the Desktop version of Onenote 2016 or above is installed." | Write-Warning
+    }
+
+    # Validate dependencies
+    if (! (Get-Command -Name 'pandoc.exe') ) {
+        throw "Could not locate pandoc.exe. Please ensure pandoc is installed."
+    }
+}
+
+Function Get-DefaultConfiguration {
+    [CmdletBinding()]
+    param ()
+
+    # The default configuration
+    $config = [ordered]@{
+        notesdestpath = @{
+            description = @'
+Specify folder path that will contain your resulting Notes structure - Default: c:\temp\notes
+'@
+            default = 'c:\temp\notes'
+            validateOptions = 'directoryexists'
+        }
+        targetNotebook = @{
+            description = @'
+Specify a notebook name to convert
+'': Convert all notebooks - Default
+'mynotebook': Convert specific notebook named 'mynotebook'
+'@
+            default = ''
+        }
+        usedocx = @{
+            description = @'
+Whether to create new word docs or reuse existing ones
+1: Always create new .docx files - Default
+2: Use existing .docx files (90% faster)
+'@
+            default = 1
+        }
+        keepdocx = @{
+            description = @'
+Whether to discard word docs after conversion
+1: Discard intermediate .docx files - Default
+2: Keep .docx files
+'@
+            default = 1
+        }
+        prefixFolders = @{
+            description = @'
+Whether to use prefix vs subfolders
+1: Create folders for subpages (e.g. Page\Subpage.md) - Default
+2: Add prefixes for subpages (e.g. Page_Subpage.md)
+'@
+            default = 1
+        }
+        medialocation = @{
+            description = @'
+Whether to store media in single or multiple folders
+1: Images stored in single 'media' folder at Notebook-level - Default
+2: Separate 'media' folder for each folder in the hierarchy
+'@
+            default = 1
+        }
+        conversion = @{
+            description = @'
+Specify conversion type
+1: markdown (Pandoc) - Default
+2: commonmark (CommonMark Markdown)
+3: gfm (GitHub-Flavored Markdown)
+4: markdown_mmd (MultiMarkdown)
+5: markdown_phpextra (PHP Markdown Extra)
+6: markdown_strict (original unextended Markdown)
+'@
+            default = 1
+        }
+        headerTimestampEnabled = @{
+            description = @'
+Whether to include page timestamp and separator at top of document
+1: Include - Default
+2: Don't include
+'@
+            default = 1
+        }
+        keepspaces = @{
+            description = @'
+Whether to clear double spaces between bullets
+1: Clear double spaces in bullets - Default
+2: Keep double spaces
+'@
+            default = 1
+        }
+        keepescape = @{
+            description = @'
+Whether to clear escape symbols from md files
+1: Clear '\' symbol escape character from files - Default
+2: Keep '\' symbol escape
+'@
+            default = 1
+        }
+        keepPathSpaces = @{
+            description = @'
+Whether to replace spaces with dashes i.e. '-' in file and folder names
+1: Replace spaces with dashes in file and folder names - Default
+2: Keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces)"
+'@
+            default = 1
+        }
+    }
+
+    $config
+}
+
+Function New-ConfigurationFile {
+    [CmdletBinding()]
+    param ()
+
+    # Generate a configuration file config.example.ps1
+    @'
+#
+# Note: This config file is for those who are lazy to type in configuration everytime you run ./ConvertOneNote2MarkDown-v2.ps1
+#
+# Steps:
+#   1) Rename this file to config.ps1. Ensure it is in the same folder as the ConvertOneNote2MarkDown-v2.ps1 script
+#   2) Configure the options below to your liking
+#   3) Run the main script: ./ConvertOneNote2MarkDown-v2.ps1. Sit back while the script starts converting immediately.
+'@ | Out-File "$PSScriptRoot/config.example.ps1" -Encoding utf8
+
+    $defaultConfig = Get-DefaultConfiguration
+    foreach ($key in $defaultConfig.Keys) {
+        # Add a '#' in front of each line of the option description
+        $defaultConfig[$key]['description'].Trim() -replace "^|`n", "`n# " | Out-File "$PSScriptRoot/config.example.ps1" -Encoding utf8 -Append
+
+        # Write the variable
+        if ( $defaultConfig[$key]['default'] -is [string]) {
+            "`$$key = '$( $defaultConfig[$key]['default'] )'" | Out-File "$PSScriptRoot/config.example.ps1" -Encoding utf8 -Append
+        }else {
+            "`$$key = $( $defaultConfig[$key]['default'] )" | Out-File "$PSScriptRoot/config.example.ps1" -Encoding utf8 -Append
+        }
+    }
+}
+
+Function Compile-Configuration {
+    [CmdletBinding()]
+    param ()
+
+    # Get a default configuration
+    $config = Get-DefaultConfiguration
+
+    # Override configuration
+    if (Test-Path $PSScriptRoot/config.ps1) {
+        # Get override configuration from config file ./config.ps1
+        & {
+            . $PSScriptRoot/config.ps1
+            foreach ($key in @($config.Keys)) {
+                $config[$key]['value'] = Get-Variable -Name $key -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Value
+                # Trim string
+                if ($config[$key]['value'] -is [string]) {
+                    $config[$key]['value'] = $config[$key]['value'].Trim()
+                }
+                # Remove trailing slash(es) for paths
+                if ($key -match 'path' -and $config[$key]['value'] -match '[/\\]') {
+                    $config[$key]['value'] = $config[$key]['value'].TrimEnd('/').TrimEnd('\')
+                }
+            }
+        }
+    }else {
+        # Get override configuration from interactive prompts
+        foreach ($key in $config.Keys) {
+            "" | Write-Host -ForegroundColor Cyan
+            $config[$key]['description'] | Write-Host -ForegroundColor Cyan
+            # E.g. 'string', 'int'
+            $typeName = [Microsoft.PowerShell.ToStringCodeMethods]::Type($config[$key]['default'].GetType())
+            # Keep prompting until we get a answer of castable type
+            do {
+                # Cast the input as a type. E.g. Read-Host -Prompt 'Entry' -as [int]
+                $config[$key]['value'] = Invoke-Expression -Command "(Read-Host -Prompt 'Entry') -as [$typeName]"
+            }while ($null -eq $config[$key]['value'])
+            # Fallback on default value if the input is empty string
+            if ($config[$key]['value'] -is [string] -and $config[$key]['value'] -eq '') {
+                $config[$key]['value'] = $config[$key]['default']
+            }
+            # Fallback on default value if the input is empty integer (0)
+            if ($config[$key]['value'] -is [int] -and $config[$key]['value'] -eq 0) {
+                $config[$key]['value'] = $config[$key]['default']
+            }
+        }
+    }
+
+    $config
+}
+
+Function Validate-Configuration {
+    [CmdletBinding(DefaultParameterSetName='default')]
+    param (
+        [Parameter(ParameterSetName='default',Position=0)]
+        [object]
+        $Config
+    ,
+        [Parameter(ParameterSetName='pipeline',ValueFromPipeline)]
+        [object]
+        $InputObject
+    )
+    process {
+        if ($InputObject) {
+            $Config = $InputObject
+        }
+        if ($null -eq $Config) {
+            throw "No input parameters specified."
+        }
+
+        # Validate a given configuration against a prototype configuration
+        $defaultConfig = Get-DefaultConfiguration
+        foreach ($key in $defaultConfig.Keys) {
+            if (! $Config.Contains($key)) {
+                throw "Missing configuration option '$key'"
+            }
+            if ($defaultConfig[$key]['default'].GetType().FullName -ne $Config[$key]['value'].GetType().FullName) {
+                throw "Invalid configuration option '$key'. Expected a value of type $( $defaultConfig[$key]['default'].GetType().FullName ), but value was of type $( $config[$key]['value'].GetType().FullName )"
+            }
+            if ($defaultConfig[$key].Contains('validateOptions')) {
+                if ($defaultConfig[$key]['validateOptions'] -contains 'directoryexists') {
+                    if ( ! $config[$key]['value'] -or ! (Test-Path $config[$key]['value'] -PathType Container -ErrorAction SilentlyContinue) ) {
+                        throw "Invalid configuration option '$key'. The directory '$( $config[$key]['value'] )' does not exist, or is a file"
+                    }
+                }
+            }
+        }
+
+        # Warn of unknown configuration options
+        foreach ($key in $config.Keys) {
+            if (! $defaultConfig.Contains($key)) {
+                "Unknown configuration option '$key'" | Write-Warning
+            }
+        }
+
+        $Config
+    }
+}
+
 Function Remove-InvalidFileNameChars {
-    param(
+    [CmdletBinding()]
+    param (
         [Parameter(Mandatory = $true,
             Position = 0,
             ValueFromPipeline = $true,
@@ -19,8 +267,10 @@ Function Remove-InvalidFileNameChars {
     $newName = $newName.Substring(0, $(@{$true = 130; $false = $newName.length }[$newName.length -gt 150]))
     return $newName.Trim() # Remove boundary whitespaces
 }
+
 Function Remove-InvalidFileNameCharsInsertedFiles {
-    param(
+    [CmdletBinding()]
+    param (
         [Parameter(Mandatory = $true,
             Position = 0,
             ValueFromPipeline = $true,
@@ -43,11 +293,33 @@ Function Remove-InvalidFileNameCharsInsertedFiles {
     return $newName.Trim() # Remove boundary whitespaces
 }
 
-Function ProcessSections ($group, $FilePath) {
-    foreach ($section in $group.Section) {
+Function ProcessSections {
+    [CmdletBinding()]
+    param (
+        [object]$Config
+    ,
+        [object]$Group
+    ,
+        [object]$FilePath
+    )
+
+    # Determine some configuration
+    if ($config['prefixFolders']['value'] -eq 2) {
+        $prefixjoiner = "_"
+    }else {
+        $prefixjoiner = "\"
+    }
+    if ($config['conversion']['value'] -eq 2) { $converter = "commonmark" }
+    elseif ($config['conversion']['value'] -eq 3) { $converter = "gfm" }
+    elseif ($config['conversion']['value'] -eq 4) { $converter = "markdown_mmd" }
+    elseif ($config['conversion']['value'] -eq 5) { $converter = "markdown_phpextra" }
+    elseif ($config['conversion']['value'] -eq 6) { $converter = "markdown_strict" }
+    else { $converter = "markdown" }
+
+    foreach ($section in $Group.Section) {
         "--------------" | Write-Host
         "### " + $section.Name | Write-Host
-        $sectionFileName = "$($section.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
+        $sectionFileName = "$($section.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
         $item = New-Item -Path "$($FilePath)" -Name "$($sectionFileName)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
         "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
         [int]$previouspagelevel = 1
@@ -63,7 +335,7 @@ Function ProcessSections ($group, $FilePath) {
             $pageid = ""
             $pageid = $page.ID
             $pagename = ""
-            $pagename = $page.name | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
+            $pagename = $page.name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
             $fullexportdirpath = ""
             $fullexportdirpath = "$($FilePath)\$($sectionFileName)"
             $fullfilepathwithoutextension = ""
@@ -102,7 +374,7 @@ Function ProcessSections ($group, $FilePath) {
             #if level 2 or 3 (i.e. has a non-blank pageprefix)
             if ($pageprefix) {
                 #create filename prefixes and filepath if prefixes selected
-                if ($prefixFolders -eq 2) {
+                if ($config['prefixFolders']['value'] -eq 2) {
                     $pagename = "$($pageprefix)_$($pagename)"
                     $fullfilepathwithoutextension = "$($fullexportdirpath)\$($pagename)"
                 }
@@ -120,7 +392,7 @@ Function ProcessSections ($group, $FilePath) {
             }
 
             # set media location (central media folder at notebook-level or adjacent to .md file) based on initial user prompt
-            if ($medialocation -eq 2) {
+            if ($config['medialocation']['value'] -eq 2) {
                 $mediaPath = $fullexportdirpath.Replace('\', '/') # Normalize markdown media paths to use front slashes, i.e. '/'
                 $levelsprefix = ""
             }
@@ -139,7 +411,7 @@ Function ProcessSections ($group, $FilePath) {
             $fullexportpath = "$($NotebookFilePath)\docx\$($pagename).docx"
 
             # use existing or create new docx files
-            if ($usedocx -eq 2) {
+            if ($config['usedocx']['value'] -eq 2) {
                 # Only create new docx if doesn't exist
                 if (![System.IO.File]::Exists($fullexportpath)) {
                     # publish OneNote page to Word
@@ -147,8 +419,7 @@ Function ProcessSections ($group, $FilePath) {
                         $OneNote.Publish($pageid, $fullexportpath, "pfWord", "")
                     }
                     catch {
-                        Write-Host "Error while publishing file '$($page.name)' to docx: $($Error[0].ToString())" -ForegroundColor Red
-                        $totalerr += "Error while publishing file '$($page.name)' to docx: $($Error[0].ToString())`r`n"
+                        Write-Error "Error while publishing file '$($page.name)' to docx: $( $_.Exception.Message )"
                     }
                 }
             }
@@ -159,8 +430,7 @@ Function ProcessSections ($group, $FilePath) {
                         Remove-Item -path $fullexportpath -Force -ErrorAction SilentlyContinue
                     }
                     catch {
-                        Write-Host "Error removing intermediary '$($page.name)' docx file: $($Error[0].ToString())" -ForegroundColor Red
-                        $totalerr += "Error removing intermediary '$($page.name)' docx file: $($Error[0].ToString())`r`n"
+                        Write-Error "Error removing intermediary '$($page.name)' docx file: $( $_.Exception.Message )"
                     }
                 }
 
@@ -169,8 +439,7 @@ Function ProcessSections ($group, $FilePath) {
                     $OneNote.Publish($pageid, $fullexportpath, "pfWord", "")
                 }
                 catch {
-                    Write-Host "Error while publishing file '$($page.name)' to docx: $($Error[0].ToString())" -ForegroundColor Red
-                    $totalerr += "Error while publishing file '$($page.name)' to docx: $($Error[0].ToString())`r`n"
+                    Write-Error "Error while publishing file '$($page.name)' to docx: $( $_.Exception.Message )"
                 }
             }
 
@@ -179,8 +448,7 @@ Function ProcessSections ($group, $FilePath) {
                 pandoc.exe -f  docx -t $converter-simple_tables-multiline_tables-grid_tables+pipe_tables -i $fullexportpath -o "$($fullfilepathwithoutextension).md" --wrap=none --markdown-headings=atx --extract-media="$($mediaPath)"
             }
             catch {
-                Write-Host "Error while converting file '$($page.name)' to md: $($Error[0].ToString())" -ForegroundColor Red
-                $totalerr += "Error while converting file '$($page.name)' to md: $($Error[0].ToString())`r`n"
+                Write-Error "Error while converting file '$($page.name)' to md: $( $_.Exception.Message )"
             }
 
             # export inserted file objects, removing any escaped symbols from filename so that links to them actually work
@@ -192,12 +460,11 @@ Function ProcessSections ($group, $FilePath) {
                 "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host | Out-Null
                 $destfilename = ""
                 try {
-                    $destfilename = $pageinsertedfile.InsertedFile.preferredName | Remove-InvalidFileNameCharsInsertedFiles -KeepPathSpaces:($keepPathSpaces -eq 2)
+                    $destfilename = $pageinsertedfile.InsertedFile.preferredName | Remove-InvalidFileNameCharsInsertedFiles -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
                     Copy-Item -Path "$($pageinsertedfile.InsertedFile.pathCache)" -Destination "$($mediaPath)\media\$($destfilename)" -Force
                 }
                 catch {
-                    Write-Host "Error while copying file object '$($pageinsertedfile.InsertedFile.preferredName)' for page '$($page.name)': $($Error[0].ToString())" -ForegroundColor Red
-                    $totalerr += "Error while copying file object '$($pageinsertedfile.InsertedFile.preferredName)' for page '$($page.name)': $($Error[0].ToString())`r`n"
+                    Write-Error "Error while copying file object '$($pageinsertedfile.InsertedFile.preferredName)' for page '$($page.name)': $( $_.Exception.Message )"
                 }
                 # Change MD file Object Name References
                 try {
@@ -206,8 +473,7 @@ Function ProcessSections ($group, $FilePath) {
 
                 }
                 catch {
-                    Write-Host "Error while renaming file object name references to '$($pageinsertedfile.InsertedFile.preferredName)' for file '$($page.name)': $($Error[0].ToString())" -ForegroundColor Red
-                    $totalerr += "Error while renaming file object name references to '$($pageinsertedfile.InsertedFile.preferredName)' for file '$($page.name)': $($Error[0].ToString())`r`n"
+                    Write-Host "Error while renaming file object name references to '$($pageinsertedfile.InsertedFile.preferredName)' for file '$($page.name)': $( $_.Exception.Message )"
                 }
             }
 
@@ -216,7 +482,7 @@ Function ProcessSections ($group, $FilePath) {
                 Get-Content -path "$($fullfilepathwithoutextension).md"
             )
             $orig[0] = "# $($page.name)"
-            if ($headerTimestampEnabled -eq 2) {
+            if ($config['headerTimestampEnabled']['value'] -eq 2) {
                 Set-Content -Path "$($fullfilepathwithoutextension).md" -Value $orig[0..0], $orig[6..($orig.Count - 1)]
             }else {
                 $insert1 = "$($page.dateTime)"
@@ -227,7 +493,7 @@ Function ProcessSections ($group, $FilePath) {
             }
 
             #Clear double spaces from bullets and nonbreaking spaces from blank lines
-            if ($keepspaces -eq 2 ) {
+            if ($config['keepspaces']['value'] -eq 2 ) {
                 #do nothing
             }
             else {
@@ -235,8 +501,7 @@ Function ProcessSections ($group, $FilePath) {
                     ((Get-Content -path "$($fullfilepathwithoutextension).md" -Raw -encoding utf8).Replace([char]0x00A0, [char]0x000A).Replace([char]0x000A, [char]0x000A).Replace("`r`n`r`n", "`r`n")) | Set-Content -Path "$($fullfilepathwithoutextension).md"
                 }
                 catch {
-                    Write-Host "Error while clearing double spaces from file '$($fullfilepathwithoutextension)' : $($Error[0].ToString())" -ForegroundColor Red
-                    $totalerr += "Error while clearing double spaces from file '$($fullfilepathwithoutextension)' : $($Error[0].ToString())`r`n"
+                    Write-Error "Error while clearing double spaces from file '$($fullfilepathwithoutextension)': $( $_.Exception.Message )"
                 }
             }
 
@@ -251,16 +516,14 @@ Function ProcessSections ($group, $FilePath) {
                     Rename-Item -Path "$($image.FullName)" -NewName $newimageName -ErrorAction SilentlyContinue
                 }
                 catch {
-                    Write-Host "Error while renaming image '$($image.FullName)' for page '$($page.name)': $($Error[0].ToString())" -ForegroundColor Red
-                    $totalerr += "Error while renaming image '$($image.FullName)' for page '$($page.name)': $($Error[0].ToString())`r`n"
+                    Write-Error "Error while renaming image '$($image.FullName)' for page '$($page.name)': $( $_.Exception.Message )"
                 }
                 # Change MD file Image filename References
                 try {
                     ((Get-Content -path "$($fullfilepathwithoutextension).md" -Raw).Replace("$($image.Name)", "$($newimageName)")) | Set-Content -Path "$($fullfilepathwithoutextension).md"
                 }
                 catch {
-                    Write-Host "Error while renaming image file name references to '$($image.Name)' for file '$($page.name)': $($Error[0].ToString())" -ForegroundColor Red
-                    $totalerr += "Error while renaming image file name references to '$($image.Name)' for file '$($page.name)': $($Error[0].ToString())`r`n"
+                    Write-Error "Error while renaming image file name references to '$($image.Name)' for file '$($page.name)': $( $_.Exception.Message )"
                 }
             }
 
@@ -272,236 +535,147 @@ Function ProcessSections ($group, $FilePath) {
                 ((Get-Content -path "$($fullfilepathwithoutextension).md" -Raw).Replace("$($mediaPath)", "$($levelsprefix)")) | Set-Content -Path "$($fullfilepathwithoutextension).md"
             }
             catch {
-                Write-Host "Error while renaming image file path references for file '$($page.name)': $($Error[0].ToString())" -ForegroundColor Red
-                $totalerr += "Error while renaming image file path references for file '$($page.name)': $($Error[0].ToString())`r`n"
+                Write-Error "Error while renaming image file path references for file '$($page.name)': $( $_.Exception.Message )"
             }
 
             # Clear backslash escape symbols
-            if ($keepescape -eq 2 ) {
+            if ($config['keepescape']['value'] -eq 2 ) {
                 #do nothing
             }
             else {
-                ((Get-Content -path "$($fullfilepathwithoutextension).md" -Raw).Replace("\", '')) | Set-Content -Path "$($fullfilepathwithoutextension).md"
+                try {
+                    ((Get-Content -path "$($fullfilepathwithoutextension).md" -Raw).Replace("\", '')) | Set-Content -Path "$($fullfilepathwithoutextension).md"
+                }catch {
+                    Write-Error "Error clearing backslash escape symbols in file '$fullfilepathwithoutextension.md': $( $_.Exception.Message )"
+                }
             }
 
             # Cleanup Word files
             try {
-                if ($keepdocx -ne 2) {
-                    Remove-Item -path "$fullexportpath" -Force -ErrorAction SilentlyContinue
+                if ($config['keepdocx']['value'] -ne 2) {
+                    Remove-Item -path "$fullexportpath" -Force -ErrorAction Stop
                 }
-
             }
             catch {
-                Write-Host "Error removing intermediary '$($page.name)' docx file: $($Error[0].ToString())" -ForegroundColor Red
-                $totalerr += "Error removing intermediary '$($page.name)' docx file: $($Error[0].ToString())`r`n"
+                Write-Error "Error removing intermediary '$($page.name)' docx file: $( $_.Exception.Message )"
             }
         }
     }
 }
 
-# If a ./config.ps1 is found, use that as configuration. Else use interactive configuration.
-if (Test-Path $PSScriptRoot/config.ps1) {
-    . $PSScriptRoot/config.ps1
-}else {
-    "" | Write-Host -ForegroundColor Cyan
-    "Specify folder path that will contain your resulting Notes structure. ex. 'c:\temp\notes'" | Write-Host -ForegroundColor Cyan
-    do {
-        $notesdestpath = Read-Host -Prompt "Entry"
-    }while(!$notesdestpath)
+Function Convert-OneNote2MarkDown {
+    [CmdletBinding()]
+    param ()
 
-    "" | Write-Host -ForegroundColor Cyan
-    "Specify a notebook name to convert" | Write-Host -ForegroundColor Cyan
-    "'': Convert all notebooks - Default" | Write-Host -ForegroundColor Cyan
-    "'mynotebook': Convert specific notebook named 'mynotebook'" | Write-Host -ForegroundColor Cyan
-    $targetNotebook = Read-Host -Prompt "Enter name of notebook"
+    try {
+        # Fix encoding problems for languages other than English
+        $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
-    "" | Write-Host -ForegroundColor Cyan
-    "Whether to create new word docs or reuse existing ones" | Write-Host -ForegroundColor Cyan
-    "1: Always create new .docx files - Default" | Write-Host -ForegroundColor Cyan
-    "2: Use existing .docx files (90% faster)" | Write-Host -ForegroundColor Cyan
-    [int]$usedocx = Read-Host -Prompt "Entry"
+        # Validate dependencies
+        Validate-Dependencies
 
-    "" | Write-Host -ForegroundColor Cyan
-    "Whether to discard word docs after conversion" | Write-Host -ForegroundColor Cyan
-    "1: Discard .docx files - Default" | Write-Host -ForegroundColor Cyan
-    "2: Keep .docx files" | Write-Host -ForegroundColor Cyan
-    [int]$keepdocx = Read-Host -Prompt "Entry"
+        # Compile and validate configuration
+        $config = Compile-Configuration | Validate-Configuration
 
-    "" | Write-Host -ForegroundColor Cyan
-    "Whether to use prefix vs subfolders" | Write-Host -ForegroundColor Cyan
-    "1: Create folders for subpages (e.g. Page\Subpage.md) - Default" | Write-Host -ForegroundColor Cyan
-    "2: Add prefixes for subpages (e.g. Page_Subpage.md)" | Write-Host -ForegroundColor Cyan
-    [Int]$prefixFolders = Read-Host -Prompt "Entry"
-
-    "" | Write-Host -ForegroundColor Cyan
-    "Whether to store media in single or multiple folders" | Write-Host -ForegroundColor Cyan
-    "1: Images stored in single 'media' folder at Notebook-level (Default)" | Write-Host -ForegroundColor Cyan
-    "2: Separate 'media' folder for each folder in the hierarchy" | Write-Host -ForegroundColor Cyan
-    [int]$medialocation = Read-Host -Prompt "Entry"
-
-    "" | Write-Host -ForegroundColor Cyan
-    "Specify conversion type" | Write-Host -ForegroundColor Cyan
-    "1: markdown (Pandoc) - Default" | Write-Host -ForegroundColor Cyan
-    "2: commonmark (CommonMark Markdown)" | Write-Host -ForegroundColor Cyan
-    "3: gfm (GitHub-Flavored Markdown)" | Write-Host -ForegroundColor Cyan
-    "4: markdown_mmd (MultiMarkdown)" | Write-Host -ForegroundColor Cyan
-    "5: markdown_phpextra (PHP Markdown Extra)" | Write-Host -ForegroundColor Cyan
-    "6: markdown_strict (original unextended Markdown)" | Write-Host -ForegroundColor Cyan
-    [int]$conversion = Read-Host -Prompt "Entry: "
-
-    "" | Write-Host -ForegroundColor Cyan
-    "Whether to include page timestamp and separator at top of document" | Write-Host -ForegroundColor Cyan
-    "1: Include - Default" | Write-Host -ForegroundColor Cyan
-    "2: Don't include" | Write-Host -ForegroundColor Cyan
-    [int]$headerTimestampEnabled = Read-Host -Prompt "Entry"
-
-    "" | Write-Host -ForegroundColor Cyan
-    "Whether to clear double spaces between bullets" | Write-Host -ForegroundColor Cyan
-    "1: Clear double spaces in bullets - Default" | Write-Host -ForegroundColor Cyan
-    "2: Keep double spaces" | Write-Host -ForegroundColor Cyan
-    [int]$keepspaces = Read-Host -Prompt "Entry"
-
-    "" | Write-Host -ForegroundColor Cyan
-    "Whether to clear escape symbols from md files" | Write-Host -ForegroundColor Cyan
-    "1: Clear '\' symbol escape character from files - Default" | Write-Host -ForegroundColor Cyan
-    "2: Keep '\' symbol escape" | Write-Host -ForegroundColor Cyan
-    [int]$keepescape = Read-Host -Prompt "Entry"
-
-    "" | Write-Host -ForegroundColor Cyan
-    "Whether to replace spaces with dashes i.e. '-' in file and folder names" | Write-Host -ForegroundColor Cyan
-    "1: Replace spaces with dashes in file and folder names - Default" | Write-Host -ForegroundColor Cyan
-    "2: Keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces)" | Write-Host -ForegroundColor Cyan
-    [int]$keepPathSpaces = Read-Host -Prompt "Entry"
-}
-
-# Fix encoding problems for languages other than English
-$PSDefaultParameterValues['*:Encoding'] = 'utf8'
-
-try {
-    # Validate and compile configuration
-    if (! (Test-Path -Path $notesdestpath -PathType Container -ErrorAction SilentlyContinue) ) {
-        throw "Notes root path does not exist: $notesdestpath"
-    }
-    $notesdestpath = $notesdestpath.Trim('/').Trim('\') # Normalize notes paths to have no trailing slash or backslashes
-
-    if ($prefixFolders -eq 2) {
-        $prefixFolders = 2
-        $prefixjoiner = "_"
-    }else {
-        $prefixFolders = 1
-        $prefixjoiner = "\"
-    }
-
-    if ($conversion -eq 2) { $converter = "commonmark" }
-    elseif ($conversion -eq 3) { $converter = "gfm" }
-    elseif ($conversion -eq 4) { $converter = "markdown_mmd" }
-    elseif ($conversion -eq 5) { $converter = "markdown_phpextra" }
-    elseif ($conversion -eq 6) { $converter = "markdown_strict" }
-    else { $converter = "markdown" }
-
-    # Validate assemblies
-    if ( ($env:OS -imatch 'Windows') -and ! (Get-Item -Path $env:windir\assembly\GAC_MSIL\*onenote*) ) {
-        "There are missing onenote assemblies. Please install the Desktop version of Onenote 2016 or above." | Write-Warning
-    }
-
-    # Open OneNote hierarchy
-    if ($PSVersionTable.PSVersion.Major -le 5) {
-        $OneNote = New-Object -ComObject OneNote.Application
-    }else {
-        # Works between powershell 6.0 and 7.0, but not >= 7.1
-        Add-Type -Path $env:windir\assembly\GAC_MSIL\Microsoft.Office.Interop.OneNote\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.OneNote.dll # -PassThru
-        $OneNote = [Microsoft.Office.Interop.OneNote.ApplicationClass]::new()
-    }
-    [xml]$Hierarchy = ""
-    $totalerr = ""
-    $OneNote.GetHierarchy("", [Microsoft.Office.InterOp.OneNote.HierarchyScope]::hsPages, [ref]$Hierarchy)
-
-    # Validate the notebooks to convert
-    $notebooks = @(
-        if ($targetNotebook) {
-            $Hierarchy.Notebooks.Notebook | ? { $_.Name -eq $targetNotebook }
+        # Open OneNote hierarchy
+        if ($PSVersionTable.PSVersion.Major -le 5) {
+            $OneNote = New-Object -ComObject OneNote.Application
         }else {
-            $Hierarchy.Notebooks.Notebook
+            # Works between powershell 6.0 and 7.0, but not >= 7.1
+            Add-Type -Path $env:windir\assembly\GAC_MSIL\Microsoft.Office.Interop.OneNote\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.OneNote.dll # -PassThru
+            $OneNote = [Microsoft.Office.Interop.OneNote.ApplicationClass]::new()
         }
-    )
-    if ($notebooks.Count -eq 0) {
-        if ($targetNotebook) {
-            throw "Could not find notebook of name '$targetNotebook'"
-        }else {
-            throw "Could not find notebooks"
+        [xml]$Hierarchy = ""
+        $totalerr = @()
+        $OneNote.GetHierarchy("", [Microsoft.Office.InterOp.OneNote.HierarchyScope]::hsPages, [ref]$Hierarchy)
+
+        # Validate the notebooks to convert
+        $notebooks = @(
+            if ($config['targetNotebook']['value']) {
+                $Hierarchy.Notebooks.Notebook | Where-Object { $_.Name -eq $config['targetNotebook']['value'] }
+            }else {
+                $Hierarchy.Notebooks.Notebook
+            }
+        )
+        if ($notebooks.Count -eq 0) {
+            if ($config['targetNotebook']['value']) {
+                throw "Could not find notebook of name '$( $config['targetNotebook']['value'] )'"
+            }else {
+                throw "Could not find notebooks"
+            }
         }
-    }
 
-    foreach ($notebook in $notebooks) {
-        " " | Write-Host
-        $notebook.Name | Write-Host
-        $notebookFileName = "$($notebook.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
-        $item = New-Item -Path "$($notesdestpath)\" -Name "$($notebookFileName)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-        "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
-        $NotebookFilePath = "$($notesdestpath)\$($notebookFileName)"
-        $levelsfromroot = 0
+        foreach ($notebook in $notebooks) {
+            " " | Write-Host
+            $notebook.Name | Write-Host
+            $notebookFileName = "$($notebook.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+            $item = New-Item -Path "$($config['notesdestpath']['value'])\" -Name "$($notebookFileName)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
+            "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
+            $NotebookFilePath = "$($config['notesdestpath']['value'])\$($notebookFileName)"
+            $levelsfromroot = 0
 
-        $item = New-Item -Path "$($NotebookFilePath)" -Name "docx" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-        "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
+            $item = New-Item -Path "$($NotebookFilePath)" -Name "docx" -ItemType "directory" -Force -ErrorAction SilentlyContinue
+            "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
 
-        "==============" | Write-Host
-        #process any sections that are not in a section group
-        ProcessSections $notebook $NotebookFilePath
+            "==============" | Write-Host
+            #process any sections that are not in a section group
+            ProcessSections -Config $config -Group $notebook -FilePath $NotebookFilePath -ErrorVariable +totalerr
 
-        #start looping through any top-level section groups in the notebook
-        foreach ($sectiongroup1 in $notebook.SectionGroup) {
-            $levelsfromroot = 1
-            if ($sectiongroup1.isRecycleBin -ne 'true') {
-                "# " + $sectiongroup1.Name | Write-Host
-                $sectiongroupFileName1 = "$($sectiongroup1.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
-                $item = New-Item -Path "$($notesdestpath)\$($notebookFileName)" -Name "$($sectiongroupFileName1)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host | Out-Null
-                $sectiongroupFilePath1 = "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)"
-                ProcessSections $sectiongroup1 $sectiongroupFilePath1
+            #start looping through any top-level section groups in the notebook
+            foreach ($sectiongroup1 in $notebook.SectionGroup) {
+                $levelsfromroot = 1
+                if ($sectiongroup1.isRecycleBin -ne 'true') {
+                    "# " + $sectiongroup1.Name | Write-Host
+                    $sectiongroupFileName1 = "$($sectiongroup1.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+                    $item = New-Item -Path "$($config['notesdestpath']['value'])\$($notebookFileName)" -Name "$($sectiongroupFileName1)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
+                    "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host | Out-Null
+                    $sectiongroupFilePath1 = "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)"
+                    ProcessSections -Config $config -Group $sectiongroup1 -FilePath $sectiongroupFilePath1 -ErrorVariable +totalerr
 
-                #start looping through any 2nd level section groups within the 1st level section group
-                foreach ($sectiongroup2 in $sectiongroup1.SectionGroup) {
-                    $levelsfromroot = 2
-                    if ($sectiongroup2.isRecycleBin -ne 'true') {
-                        "## " + $sectiongroup2.Name | Write-Host
-                        $sectiongroupFileName2 = "$($sectiongroup2.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
-                        $item = New-Item -Path "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)" -Name "$($sectiongroupFileName2)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                        "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
-                        $sectiongroupFilePath2 = "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)"
-                        ProcessSections $sectiongroup2 $sectiongroupFilePath2
+                    #start looping through any 2nd level section groups within the 1st level section group
+                    foreach ($sectiongroup2 in $sectiongroup1.SectionGroup) {
+                        $levelsfromroot = 2
+                        if ($sectiongroup2.isRecycleBin -ne 'true') {
+                            "## " + $sectiongroup2.Name | Write-Host
+                            $sectiongroupFileName2 = "$($sectiongroup2.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+                            $item = New-Item -Path "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)" -Name "$($sectiongroupFileName2)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
+                            "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
+                            $sectiongroupFilePath2 = "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)"
+                            ProcessSections -Config $config -Group $sectiongroup2 -FilePath $sectiongroupFilePath2 -ErrorVariable +totalerr
 
-                        #start looping through any 2nd level section groups within the 1st level section group
-                        foreach ($sectiongroup3 in $sectiongroup2.SectionGroup) {
-                            $levelsfromroot = 3
-                            if ($sectiongroup3.isRecycleBin -ne 'true') {
-                                "### " + $sectiongroup3.Name | Write-Host
-                                $sectiongroupFileName3 = "$($sectiongroup3.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
-                                $item = New-Item -Path "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)" -Name "$($sectiongroupFileName3)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                                "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
-                                $sectiongroupFilePath3 = "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)"
-                                ProcessSections $sectiongroup3 $sectiongroupFilePath3
+                            #start looping through any 2nd level section groups within the 1st level section group
+                            foreach ($sectiongroup3 in $sectiongroup2.SectionGroup) {
+                                $levelsfromroot = 3
+                                if ($sectiongroup3.isRecycleBin -ne 'true') {
+                                    "### " + $sectiongroup3.Name | Write-Host
+                                    $sectiongroupFileName3 = "$($sectiongroup3.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+                                    $item = New-Item -Path "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)" -Name "$($sectiongroupFileName3)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
+                                    "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
+                                    $sectiongroupFilePath3 = "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)"
+                                    ProcessSections -Config $config -Group $sectiongroup3 -FilePath $sectiongroupFilePath3 -ErrorVariable +totalerr
 
-                                #start looping through any 2nd level section groups within the 1st level section group
-                                foreach ($sectiongroup4 in $sectiongroup3.SectionGroup) {
-                                    $levelsfromroot = 4
-                                    if ($sectiongroup4.isRecycleBin -ne 'true') {
-                                        "#### " + $sectiongroup4.Name | Write-Host
-                                        $sectiongroupFileName4 = "$($sectiongroup4.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
-                                        $item = New-Item -Path "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)" -Name "$($sectiongroupFileName4)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                                        "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
-                                        $sectiongroupFilePath4 = "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)"
-                                        ProcessSections $sectiongroup4 $sectiongroupFilePath4
+                                    #start looping through any 2nd level section groups within the 1st level section group
+                                    foreach ($sectiongroup4 in $sectiongroup3.SectionGroup) {
+                                        $levelsfromroot = 4
+                                        if ($sectiongroup4.isRecycleBin -ne 'true') {
+                                            "#### " + $sectiongroup4.Name | Write-Host
+                                            $sectiongroupFileName4 = "$($sectiongroup4.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+                                            $item = New-Item -Path "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)" -Name "$($sectiongroupFileName4)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
+                                            "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
+                                            $sectiongroupFilePath4 = "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)"
+                                            ProcessSections -Config $config -Group $sectiongroup4 -FilePath $sectiongroupFilePath4 -ErrorVariable +totalerr
 
-                                        #start looping through any 2nd level section groups within the 1st level section group
-                                        foreach ($sectiongroup5 in $sectiongroup4.SectionGroup) {
-                                            $levelsfromroot = 5
-                                            if ($sectiongroup5.isRecycleBin -ne 'true') {
-                                                "#### " + $sectiongroup5.Name | Write-Host
-                                                $sectiongroupFileName5 = "$($sectiongroup5.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($keepPathSpaces -eq 2)
-                                                $item = New-Item -Path "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)" -Name "$($sectiongroupFileName5)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                                                "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
-                                                $sectiongroupFilePath5 = "$($notesdestpath)\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)\$($sectiongroupFileName5)"
-                                                ProcessSections $sectiongroup5 $sectiongroupFilePath5
+                                            #start looping through any 2nd level section groups within the 1st level section group
+                                            foreach ($sectiongroup5 in $sectiongroup4.SectionGroup) {
+                                                $levelsfromroot = 5
+                                                if ($sectiongroup5.isRecycleBin -ne 'true') {
+                                                    "#### " + $sectiongroup5.Name | Write-Host
+                                                    $sectiongroupFileName5 = "$($sectiongroup5.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+                                                    $item = New-Item -Path "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)" -Name "$($sectiongroupFileName5)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
+                                                    "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
+                                                    $sectiongroupFilePath5 = "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)\$($sectiongroupFileName5)"
+                                                    ProcessSections -Config $config -Group $sectiongroup5 -FilePath $sectiongroupFilePath5 -ErrorVariable +totalerr
+                                                }
                                             }
                                         }
                                     }
@@ -512,17 +686,22 @@ try {
                 }
             }
         }
-    }
-}catch {
-    throw
-}finally {
-    'Cleaning up' | Write-Host
+    }catch {
+        throw
+    }finally {
+        'Cleaning up' | Write-Host
 
-    # Release OneNote hierarchy
-    if (Get-Variable -Name OneNote -ErrorAction SilentlyContinue) {
-        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($OneNote)
-        Remove-Variable -Name OneNote -Force
+        # Release OneNote hierarchy
+        if (Get-Variable -Name OneNote -ErrorAction SilentlyContinue) {
+            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($OneNote) | Out-Null
+            Remove-Variable -Name OneNote -Force
+        }
+        if ($totalerr) {
+            "Errors: " | Write-Host
+            $totalerr | Where-Object { $_.CategoryInfo.Reason -eq 'WriteErrorException' } | Write-Host
+        }
     }
-
-    "Errors: $totalerr" | Write-Host
 }
+
+# Entrypoint
+Convert-OneNote2MarkDown
