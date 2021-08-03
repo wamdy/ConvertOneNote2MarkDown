@@ -25,7 +25,7 @@ Ready to make the step to Markdown and saying farewell to your OneNote, EverNote
 The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote Object Model on your workstation to convert all OneNote pages to Word documents and then utilizes PanDoc to convert the Word documents to Markdown (.md) format. It will also:
 
 * Create a **folder structure** for your Notebooks and Sections
-* Process pages that are in sections at the **Notebook, Section Group and up to 5 Nested Section Group levels**
+* Process pages that are in sections at the **Notebook, Section Group and all Nested Section Group levels**
 * Allow you to choose between **converting a specific notebook or all notebooks**
 * Allow you to **choose between creating subfolders for subpages** (e.g. Page\Subpage.md) or **appending prefixes** (e.g. Page_Subpage.md)
 * Allow you you choose between putting all **Images** in a central '/media' folder for each notebook, or in a separate '/media' folder in each folder of the hierarchy
@@ -41,10 +41,10 @@ The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote 
    * markdown_phpextra (PHP Markdown Extra)
    * markdown_strict (original unextended Markdown)
 * See more details on these options here: https://pandoc.org/MANUAL.html#options
-* Allow to choose whether to include page timestamp and separator at top of document
-* Remove double spaces and "\" escape symbol that are created when converting with Pandoc
+* Allow to choose whether to include page timestamp and a separator at top of document
+  * Improved file headers, with title now as a # heading, standardized DateTime format, and horizontal line to separate from rest of document
+* Remove double spaces and `\` escape symbol that are created when converting with Pandoc
 * Allow to choose whether to keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces).
-* Improved file headers, with title now as a # heading, standardized DateTime format, and horizontal line to separate from rest of document
 
 ## Known Issues
 

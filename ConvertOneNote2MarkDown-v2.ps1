@@ -300,7 +300,11 @@ Function ProcessSections {
     ,
         [object]$Group
     ,
+        [object]$NotebookFilePath
+    ,
         [object]$FilePath
+    ,
+        [int]$LevelsFromRoot
     )
 
     # Determine some configuration
@@ -317,11 +321,11 @@ Function ProcessSections {
     else { $converter = "markdown" }
 
     foreach ($section in $Group.Section) {
-        "--------------" | Write-Host
-        "### " + $section.Name | Write-Host
         $sectionFileName = "$($section.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+        "" | Write-Host
+        "$( '#' * $levelsfromroot ) $( $sectionFileName ) (Section)".Trim() | Write-Host
         $item = New-Item -Path "$($FilePath)" -Name "$($sectionFileName)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-        "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
+        "Directory: $($item.FullName)" | Write-Host
         [int]$previouspagelevel = 1
         [string]$previouspagenamelevel1 = ""
         [string]$previouspagenamelevel2 = ""
@@ -350,13 +354,11 @@ Function ProcessSections {
                 $previouspagenamelevel1 = $pagename
                 $previouspagenamelevel2 = ""
                 $previouspagelevel = 1
-                "#### " + $page.name | Write-Host
             }
             elseif ($pagelevel -eq 2) {
                 $pageprefix = "$($previouspagenamelevel1)"
                 $previouspagenamelevel2 = $pagename
                 $previouspagelevel = 2
-                "##### " + $page.name | Write-Host
             }
             elseif ($pagelevel -eq 3) {
                 if ($previouspagelevel -eq 2) {
@@ -368,8 +370,9 @@ Function ProcessSections {
                 }
                 #and if previous was 3, do nothing/keep previous label
                 $previouspagelevel = 3
-                "####### " + $page.name | Write-Host
             }
+            "" | Write-Host
+            "$( '#' * $levelsfromroot )$( '#' * $pagelevel ) $( $pagename ) (Page, level $pagelevel)".Trim() | Write-Host
 
             #if level 2 or 3 (i.e. has a non-blank pageprefix)
             if ($pageprefix) {
@@ -381,7 +384,7 @@ Function ProcessSections {
                 #all else/default, create subfolders and filepath if subfolders selected
                 else {
                     $item = New-Item -Path "$($fullexportdirpath)\$($pageprefix)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                    "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host | Out-Null
+                    "Directory: $($item.FullName)" | Write-Host
                     $fullexportdirpath = "$($fullexportdirpath)\$($pageprefix)"
                     $fullfilepathwithoutextension = "$($fullexportdirpath)\$($pagename)"
                     $levelsprefix = "../" * ($levelsfromroot + $pagelevel - 1) + ".."
@@ -457,7 +460,7 @@ Function ProcessSections {
             $pageinsertedfiles = $pagexml.Page.Outline.OEChildren.OE | Where-Object { $_.InsertedFile }
             foreach ($pageinsertedfile in $pageinsertedfiles) {
                 $item = New-Item -Path "$($mediaPath)" -Name "media" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host | Out-Null
+                "Directory: $($item.FullName)" | Write-Host
                 $destfilename = ""
                 try {
                     $destfilename = $pageinsertedfile.InsertedFile.preferredName | Remove-InvalidFileNameCharsInsertedFiles -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
@@ -606,82 +609,33 @@ Function Convert-OneNote2MarkDown {
         }
 
         foreach ($notebook in $notebooks) {
-            " " | Write-Host
-            $notebook.Name | Write-Host
-            $notebookFileName = "$($notebook.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
-            $item = New-Item -Path "$($config['notesdestpath']['value'])\" -Name "$($notebookFileName)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-            "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
-            $NotebookFilePath = "$($config['notesdestpath']['value'])\$($notebookFileName)"
+            # Process notebook top level. Think of a notebook itself as a section group
             $levelsfromroot = 0
+            if ($levelsfromroot -eq 0) {
+                $sectiongroup = $notebook
+                $sectiongroupName = $notebook.Name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+                "==============" | Write-Host
+                "Notebook: $( $sectiongroup.Name )" | Write-Host
+                $notesDestinationBaseDirectory = New-Item -Path ( Join-Path $config['notesdestpath']['value'] $sectiongroupName ) -ItemType "directory" -Force -ErrorAction SilentlyContinue
+                "Notes destination directory: $($notesDestinationBaseDirectory.FullName)" | Write-Host
+                $item = New-Item -Path "$( $notesDestinationBaseDirectory.FullName )\docx" -ItemType "directory" -Force -ErrorAction SilentlyContinue
+                "Notes docx directory: $( $item.FullName )" | Write-Host
+                "==============" | Write-Host
+                ProcessSections -Config $config -Group $sectiongroup -NotebookFilePath $notesDestinationBaseDirectory.FullName -FilePath $notesDestinationBaseDirectory.FullName -LevelsFromRoot $levelsfromroot -ErrorVariable +totalerr
+            }
 
-            $item = New-Item -Path "$($NotebookFilePath)" -Name "docx" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-            "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
-
-            "==============" | Write-Host
-            #process any sections that are not in a section group
-            ProcessSections -Config $config -Group $notebook -FilePath $NotebookFilePath -ErrorVariable +totalerr
-
-            #start looping through any top-level section groups in the notebook
-            foreach ($sectiongroup1 in $notebook.SectionGroup) {
-                $levelsfromroot = 1
-                if ($sectiongroup1.isRecycleBin -ne 'true') {
-                    "# " + $sectiongroup1.Name | Write-Host
-                    $sectiongroupFileName1 = "$($sectiongroup1.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
-                    $item = New-Item -Path "$($config['notesdestpath']['value'])\$($notebookFileName)" -Name "$($sectiongroupFileName1)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                    "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host | Out-Null
-                    $sectiongroupFilePath1 = "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)"
-                    ProcessSections -Config $config -Group $sectiongroup1 -FilePath $sectiongroupFilePath1 -ErrorVariable +totalerr
-
-                    #start looping through any 2nd level section groups within the 1st level section group
-                    foreach ($sectiongroup2 in $sectiongroup1.SectionGroup) {
-                        $levelsfromroot = 2
-                        if ($sectiongroup2.isRecycleBin -ne 'true') {
-                            "## " + $sectiongroup2.Name | Write-Host
-                            $sectiongroupFileName2 = "$($sectiongroup2.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
-                            $item = New-Item -Path "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)" -Name "$($sectiongroupFileName2)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                            "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
-                            $sectiongroupFilePath2 = "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)"
-                            ProcessSections -Config $config -Group $sectiongroup2 -FilePath $sectiongroupFilePath2 -ErrorVariable +totalerr
-
-                            #start looping through any 2nd level section groups within the 1st level section group
-                            foreach ($sectiongroup3 in $sectiongroup2.SectionGroup) {
-                                $levelsfromroot = 3
-                                if ($sectiongroup3.isRecycleBin -ne 'true') {
-                                    "### " + $sectiongroup3.Name | Write-Host
-                                    $sectiongroupFileName3 = "$($sectiongroup3.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
-                                    $item = New-Item -Path "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)" -Name "$($sectiongroupFileName3)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                                    "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
-                                    $sectiongroupFilePath3 = "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)"
-                                    ProcessSections -Config $config -Group $sectiongroup3 -FilePath $sectiongroupFilePath3 -ErrorVariable +totalerr
-
-                                    #start looping through any 2nd level section groups within the 1st level section group
-                                    foreach ($sectiongroup4 in $sectiongroup3.SectionGroup) {
-                                        $levelsfromroot = 4
-                                        if ($sectiongroup4.isRecycleBin -ne 'true') {
-                                            "#### " + $sectiongroup4.Name | Write-Host
-                                            $sectiongroupFileName4 = "$($sectiongroup4.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
-                                            $item = New-Item -Path "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)" -Name "$($sectiongroupFileName4)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                                            "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
-                                            $sectiongroupFilePath4 = "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)"
-                                            ProcessSections -Config $config -Group $sectiongroup4 -FilePath $sectiongroupFilePath4 -ErrorVariable +totalerr
-
-                                            #start looping through any 2nd level section groups within the 1st level section group
-                                            foreach ($sectiongroup5 in $sectiongroup4.SectionGroup) {
-                                                $levelsfromroot = 5
-                                                if ($sectiongroup5.isRecycleBin -ne 'true') {
-                                                    "#### " + $sectiongroup5.Name | Write-Host
-                                                    $sectiongroupFileName5 = "$($sectiongroup5.Name)" | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
-                                                    $item = New-Item -Path "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)" -Name "$($sectiongroupFileName5)" -ItemType "directory" -Force -ErrorAction SilentlyContinue
-                                                    "Directory: $($item.FullName)" | Format-Table | Out-String | Write-Host
-                                                    $sectiongroupFilePath5 = "$($config['notesdestpath']['value'])\$($notebookFileName)\$($sectiongroupFileName1)\$($sectiongroupFileName2)\$($sectiongroupFileName3)\$($sectiongroupFileName4)\$($sectiongroupFileName5)"
-                                                    ProcessSections -Config $config -Group $sectiongroup5 -FilePath $sectiongroupFilePath5 -ErrorVariable +totalerr
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+            # Process section group(s) recursively until no more are found
+            while ($sectiongroups = $sectiongroup.SectionGroup) {
+                $levelsfromroot++
+                $notesDestinationParentDirectory = if ($levelsfromroot -eq 1) { $notesDestinationBaseDirectory } else { $notesDestinationDirectory }
+                foreach ($sectiongroup in $sectiongroups) {
+                    $sectiongroupName = $sectiongroup.Name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+                    "" | Write-Host
+                    "$( '#' * $levelsfromroot ) $( $sectiongroup.Name ) (Section Group)".Trim() | Write-Host
+                    if ($sectiongroup.isRecycleBin -ne 'true') {
+                        $notesDestinationDirectory = New-Item -Path ( Join-Path $notesDestinationParentDirectory.FullName $sectiongroupName ) -ItemType "directory" -Force -ErrorAction SilentlyContinue
+                        "Directory: $( $notesDestinationDirectory.FullName )" | Write-Host
+                        ProcessSections -Config $config -Group $sectiongroup -NotebookFilePath $notesDestinationBaseDirectory.FullName -FilePath $notesDestinationDirectory.FullName -LevelsFromRoot $levelsfromroot -ErrorVariable +totalerr
                     }
                 }
             }
