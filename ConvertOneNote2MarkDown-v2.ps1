@@ -44,6 +44,7 @@ Whether to create new word docs or reuse existing ones
 2: Use existing .docx files (90% faster)
 '@
             default = 1
+            validateRange = 1,2
         }
         keepdocx = @{
             description = @'
@@ -52,6 +53,7 @@ Whether to discard word docs after conversion
 2: Keep .docx files
 '@
             default = 1
+            validateRange = 1,2
         }
         prefixFolders = @{
             description = @'
@@ -60,6 +62,7 @@ Whether to use prefix vs subfolders
 2: Add prefixes for subpages (e.g. Page_Subpage.md)
 '@
             default = 1
+            validateRange = 1,2
         }
         medialocation = @{
             description = @'
@@ -68,6 +71,7 @@ Whether to store media in single or multiple folders
 2: Separate 'media' folder for each folder in the hierarchy
 '@
             default = 1
+            validateRange = 1,2
         }
         conversion = @{
             description = @'
@@ -80,6 +84,7 @@ Specify conversion type
 6: markdown_strict (original unextended Markdown)
 '@
             default = 1
+            validateRange = 1,6
         }
         headerTimestampEnabled = @{
             description = @'
@@ -88,6 +93,7 @@ Whether to include page timestamp and separator at top of document
 2: Don't include
 '@
             default = 1
+            validateRange = 1,6
         }
         keepspaces = @{
             description = @'
@@ -96,6 +102,7 @@ Whether to clear double spaces between bullets
 2: Keep double spaces
 '@
             default = 1
+            validateRange = 1,6
         }
         keepescape = @{
             description = @'
@@ -104,6 +111,7 @@ Whether to clear escape symbols from md files
 2: Keep '\' symbol escape
 '@
             default = 1
+            validateRange = 1,6
         }
         keepPathSpaces = @{
             description = @'
@@ -112,6 +120,7 @@ Whether to replace spaces with dashes i.e. '-' in file and folder names
 2: Keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces)"
 '@
             default = 1
+            validateRange = 1,6
         }
     }
 
@@ -232,6 +241,11 @@ Function Validate-Configuration {
                     }
                 }
             }
+            if ($defaultConfig[$key].Contains('validateRange')) {
+                if ($Config[$key]['value'] -lt $defaultConfig[$key]['validateRange'][0] -or $Config[$key]['value'] -gt $defaultConfig[$key]['validateRange'][1]) {
+                    throw "Invalid configuration option '$key'. The value must be between $( $defaultConfig[$key]['validateRange'][0] ) and $( $defaultConfig[$key]['validateRange'][1] )"
+                }
+            }
         }
 
         # Warn of unknown configuration options
@@ -242,6 +256,31 @@ Function Validate-Configuration {
         }
 
         $Config
+    }
+}
+
+Function Print-Configuration {
+    [CmdletBinding(DefaultParameterSetName='default')]
+    param (
+        [Parameter(ParameterSetName='default',Position=0)]
+        [object]
+        $Config
+    ,
+        [Parameter(ParameterSetName='pipeline',ValueFromPipeline)]
+        [object]
+        $InputObject
+    )
+    process {
+        if ($InputObject) {
+            $Config = $InputObject
+        }
+        if ($null -eq $Config) {
+            throw "No input parameters specified."
+        }
+
+        foreach ($key in $Config.Keys) {
+            "$( $key ): $( $Config[$key]['value'] )" | Write-Host -ForegroundColor DarkGray
+        }
     }
 }
 
@@ -865,6 +904,9 @@ Function Convert-OneNote2MarkDown {
         # Compile and validate configuration
         $config = Compile-Configuration | Validate-Configuration
 
+        "Configuration:" | Write-Host -ForegroundColor Cyan
+        $config | Print-Configuration
+
         # Connect to OneNote
         $OneNote = New-OneNoteConnection
 
@@ -888,12 +930,12 @@ Function Convert-OneNote2MarkDown {
         }
 
         # Build a conversion configuration of notebook(s) (i.e. a conversion object representing the conversion)
-        "Building a conversion configuration. This might take a while if you have many large notebooks..." | Write-Host -ForegroundColor Cyan
+        "`nBuilding a conversion configuration. This might take a while if you have many large notebooks..." | Write-Host -ForegroundColor Cyan
         $conversionConfig = New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $config['notesdestpath']['value'] -Config $config -SectionGroups $notebooks -LevelsFromRoot 0 -ErrorVariable +totalerr
         "Done building conversion configuration." | Write-Host -ForegroundColor Cyan
 
         # Convert the notebook(s)
-        "Converting notes..." | Write-Host -ForegroundColor Cyan
+        "`nConverting notes..." | Write-Host -ForegroundColor Cyan
         Convert-OneNoteSectionGroup -OneNoteConnection $OneNote -Config $config -ConversionConfig $conversionConfig -Recurse -ErrorVariable +totalerr
         "Done converting notes." | Write-Host -ForegroundColor Cyan
     }catch {
