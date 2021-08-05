@@ -441,6 +441,10 @@ Function New-SectionGroupConversionConfig {
         [Parameter(Mandatory)]
         [int]
         $LevelsFromRoot
+    ,
+        [Parameter()]
+        [switch]
+        $AsArray
     )
 
     $sectionGroupConversionConfig = [System.Collections.ArrayList]@()
@@ -450,9 +454,9 @@ Function New-SectionGroupConversionConfig {
         $cfg = [ordered]@{}
 
         if ($LevelsFromRoot -eq 0) {
-            "`n$( '#' * ($LevelsFromRoot + 1) ) Building conversion configuration for $( $sectionGroup.name ) [Notebook]" | Write-Host -ForegroundColor DarkGreen
+            "`nBuilding conversion configuration for $( $sectionGroup.name ) [Notebook]" | Write-Host -ForegroundColor DarkGreen
         }else {
-            "`n$( '#' * ($LevelsFromRoot + 1) ) Building conversion configuration for $( $sectionGroup.name ) [Section Group]" | Write-Host -ForegroundColor DarkGray
+            "`n$( '#' * ($LevelsFromRoot) ) Building conversion configuration for $( $sectionGroup.name ) [Section Group]" | Write-Host -ForegroundColor DarkGray
         }
 
         # Build this Section Group
@@ -478,7 +482,7 @@ Function New-SectionGroupConversionConfig {
         # Build this Section Group's sections
         $cfg['sections'] = [System.Collections.ArrayList]@()
         foreach ($section in $sectionGroup.Section) {
-            "$( '#' * ($LevelsFromRoot + 2) ) Building conversion configuration for $( $section.name ) [Page]" | Write-Host -ForegroundColor DarkGray
+            "$( '#' * ($LevelsFromRoot + 1) ) Building conversion configuration for $( $section.name ) [Section]" | Write-Host -ForegroundColor DarkGray
 
             $sectionCfg = [ordered]@{}
             $sectionCfg['object'] = $section # Keep a reference to the Section object
@@ -491,7 +495,7 @@ Function New-SectionGroupConversionConfig {
 
             # Build Section's pages
             foreach ($page in $section.Page) {
-                "$( '#' * ($LevelsFromRoot + 3) ) Building conversion configuration for $( $page.name ) [Page]" | Write-Host -ForegroundColor DarkGray
+                "$( '#' * ($LevelsFromRoot + 2) ) Building conversion configuration for $( $page.name ) [Page]" | Write-Host -ForegroundColor DarkGray
 
                 $previousPage = if ($sectionCfg['pages'].Count -gt 0) { $sectionCfg['pages'][$sectionCfg['pages'].Count - 1] } else { $null }
                 $pageCfg = [ordered]@{}
@@ -673,30 +677,46 @@ Function New-SectionGroupConversionConfig {
                     $pageCfg['mediaPath']
                 )
 
-                # Populate the pages array
+                # Populate the pages array (needed even when -AsArray switch is not on, because we need this section's pages' state to know whether there are duplicate page names)
                 $sectionCfg['pages'].Add( $pageCfg ) > $null
+
+                if (!$AsArray) {
+                    # Send the configuration immediately down the pipeline
+                    $pageCfg
+                }
             }
 
             # Populate the sections array
-            $cfg['sections'].Add( $sectionCfg ) > $null
+            if ($AsArray) {
+                $cfg['sections'].Add( $sectionCfg ) > $null
+            }
         }
 
         # Build this Section Group's Section Groups
         if ($sectiongroup.SectionGroup) {
             # $sectionGroupName = $sectionGroup.Name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
-            $cfg['sectionGroups'] = New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $cfg['notesDirectory'] -Config $Config -SectionGroups $sectiongroup.SectionGroup -LevelsFromRoot ($LevelsFromRoot + 1)
+            if ($AsArray) {
+                $cfg['sectionGroups'] = New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $cfg['notesDirectory'] -Config $Config -SectionGroups $sectiongroup.SectionGroup -LevelsFromRoot ($LevelsFromRoot + 1) -AsArray:$AsArray
+            }else {
+                # Send the configuration immediately down the pipeline
+                New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $cfg['notesDirectory'] -Config $Config -SectionGroups $sectiongroup.SectionGroup -LevelsFromRoot ($LevelsFromRoot + 1)
+            }
         }
 
         # Populate the conversion config
-        $sectionGroupConversionConfig.Add( $cfg ) > $null
+        if ($AsArray) {
+            $sectionGroupConversionConfig.Add( $cfg ) > $null
+        }
     }
 
     # Return the final conversion config
-    ,$sectionGroupConversionConfig # This syntax is needed to send an array down the pipeline without it being unwrapped. (It works by wrapping it in an array with a null sibling)
+    if ($AsArray) {
+        ,$sectionGroupConversionConfig # This syntax is needed to send an array down the pipeline without it being unwrapped. (It works by wrapping it in an array with a null sibling)
+    }
 }
 
-Function Convert-OneNoteSection {
-    [CmdletBinding()]
+Function Convert-OneNotePage {
+    [CmdletBinding(DefaultParameterSetName='default')]
     param (
         # Onenote connection object
         [Parameter(Mandatory)]
@@ -709,14 +729,28 @@ Function Convert-OneNoteSection {
         $Config
     ,
         # Conversion object
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory,ParameterSetName='default')]
         [ValidateNotNullOrEmpty()]
         [object]
         $ConversionConfig
+    ,
+        [Parameter(Mandatory,ParameterSetName='pipeline',ValueFromPipeline)]
+        [ValidateNotNullOrEmpty()]
+        [object]
+        $InputObject
     )
 
-    foreach ($pageCfg in $ConversionConfig['pages']) {
+    process {
+        if ($InputObject) {
+            $ConversionConfig = $InputObject
+        }
+        if ($null -eq $ConversionConfig) {
+            throw "No config specified."
+        }
+
         try {
+            $pageCfg = $ConversionConfig
+
             "$( '#' * ($pageCfg['levelsFromRoot'] + $pageCfg['pageLevel']) ) $( $pageCfg['object'].name ) [$( $pageCfg['kind'] )]" | Write-Host
             "Uri: $( $pageCfg['uri'] )" | Write-Verbose
 
@@ -861,7 +895,9 @@ Function Convert-OneNoteSectionGroup {
         foreach ($sectionCfg in $cfg['sections']) {
             "$( '#' * ($sectionCfg['levelsFromRoot']) ) $( $sectionCfg['object'].name ) [$( $sectionCfg['kind'] )]" | Write-Host
             "Uri: $( $sectionCfg['uri'] ) [$( $sectionCfg['kind'] )]" | Write-Verbose
-            Convert-OneNoteSection -OneNoteConnection $OneNoteConnection -Config $Config -ConversionConfig $sectionCfg
+            foreach ($pageCfg in $sectionCfg['pages']) {
+                Convert-OneNotePage -OneNoteConnection $OneNoteConnection -Config $Config -ConversionConfig $pageCfg
+            }
         }
 
         if ($Recurse) {
@@ -929,14 +965,9 @@ Function Convert-OneNote2MarkDown {
             }
         }
 
-        # Build a conversion configuration of notebook(s) (i.e. a conversion object representing the conversion)
-        "`nBuilding a conversion configuration. This might take a while if you have many large notebooks..." | Write-Host -ForegroundColor Cyan
-        $conversionConfig = New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $config['notesdestpath']['value'] -Config $config -SectionGroups $notebooks -LevelsFromRoot 0 -ErrorVariable +totalerr
-        "Done building conversion configuration." | Write-Host -ForegroundColor Cyan
-
         # Convert the notebook(s)
         "`nConverting notes..." | Write-Host -ForegroundColor Cyan
-        Convert-OneNoteSectionGroup -OneNoteConnection $OneNote -Config $config -ConversionConfig $conversionConfig -Recurse -ErrorVariable +totalerr
+        New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $config['notesdestpath']['value'] -Config $config -SectionGroups $notebooks -LevelsFromRoot 0 -ErrorVariable +totalerr | Convert-OneNotePage -OneNoteConnection $OneNote -Config $config -ErrorVariable +totalerr
         "Done converting notes." | Write-Host -ForegroundColor Cyan
     }catch {
         throw

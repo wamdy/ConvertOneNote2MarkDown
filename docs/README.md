@@ -45,6 +45,7 @@ The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote 
   * Improved file headers, with title now as a # heading, standardized DateTime format, and horizontal line to separate from rest of document
 * Remove double spaces and `\` escape symbol that are created when converting with Pandoc
 * Allow to choose whether to keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces).
+* Detailed logs. Run the script with `-Verbose` to see detailed logs of each page's conversion.
 
 ## Known Issues
 
@@ -92,9 +93,13 @@ Clone this repository to acquire the powershell script.
 
     ```.\ConvertOneNote2MarkDown-v2.ps1```
 
+    * If you would like to see detailed logs about the conversion process, use the `-Verbose` switch:
+
+    ```.\ConvertOneNote2MarkDown-v2.ps1 -Verbose```
+
     * if you have trouble, try running both Onenote and Powershell as an administrator.
     * if you receive an error, try running this line to bypass security:
-     ``Set-ExecutionPolicy Bypass -Scope Process``
+    ``Set-ExecutionPolicy Bypass -Scope Process``
 
 
 1. If you chose to use a configuration file `config.ps1`, skip to the next step. If you did not choose to use a configuration file, the script will ask you for configuration interactively.
