@@ -824,7 +824,9 @@ Function Convert-OneNotePage {
                 try {
                     "Removing existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
                     if ($config['dryRun']['value'] -eq 1) {
-                        Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                        if (Test-Path $pageCfg['fullexportpath']) {
+                            Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                        }
                     }
                 }catch {
                     throw "Error removing intermediary docx file $( $pageCfg['fullexportpath'] ): $( $_.Exception.Message )"
@@ -864,7 +866,9 @@ Function Convert-OneNotePage {
                 try {
                     "Removing existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
                     if ($config['dryRun']['value'] -eq 1) {
-                        Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                        if (Test-Path $pageCfg['fullexportpath']) {
+                            Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                        }
                     }
                 }catch {
                     Write-Error "Error removing intermediary docx file $( $pageCfg['fullexportpath'] ): $( $_.Exception.Message )"

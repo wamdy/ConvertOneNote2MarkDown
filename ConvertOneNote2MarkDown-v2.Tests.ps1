@@ -995,8 +995,8 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
             Assert-MockCalled -CommandName New-Item -ParameterFilter { $Path -and $Force } -Times 4
         }
 
-        It "Halts converting if creation of any directory 6fails" {
-            Mock Remove-Item -ParameterFilter { $Path -and $Force } { throw }
+        It "Halts converting if creation of any directory fails" {
+            Mock New-Item -ParameterFilter { $ItemType -eq 'Directory' -and $Force } { throw }
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
@@ -1004,12 +1004,15 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         }
 
         It "Removes existing docx by default" {
+            Mock Test-Path { $true }
+
             Convert-OneNotePage @params 6>$null
 
             Assert-MockCalled -CommandName Remove-Item -ParameterFilter { $Path -and $Force } -Times 2
         }
 
         It "Halts converting if removal of existing docx fails" {
+            Mock Test-Path { $true }
             Mock Remove-Item -ParameterFilter { $Path -and $Force } { throw }
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
