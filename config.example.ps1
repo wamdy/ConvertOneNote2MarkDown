@@ -57,8 +57,3 @@ $keepspaces = 1
 # 1: Clear '\' symbol escape character from files - Default
 # 2: Keep '\' symbol escape
 $keepescape = 1
-
-# Whether to replace spaces with dashes i.e. '-' in file and folder names
-# 1: Replace spaces with dashes in file and folder names - Default
-# 2: Keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces)"
-$keepPathSpaces = 1

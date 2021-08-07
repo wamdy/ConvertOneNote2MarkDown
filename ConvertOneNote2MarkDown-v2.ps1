@@ -131,16 +131,6 @@ Whether to clear escape symbols from md files
             value = 1
             validateRange = 1,2
         }
-        keepPathSpaces = @{
-            description = @'
-Whether to replace spaces with dashes i.e. '-' in file and folder names
-1: Replace spaces with dashes in file and folder names - Default
-2: Keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces)"
-'@
-            default = 1
-            value = 1
-            validateRange = 1,2
-        }
     }
 
     $config
@@ -502,7 +492,7 @@ Function New-SectionGroupConversionConfig {
         $cfg = [ordered]@{}
         $cfg['object'] = $sectionGroup # Keep a reference to the SectionGroup object
         $cfg['kind'] = 'SectionGroup'
-        $cfg['nameCompat'] = $sectionGroup.name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+        $cfg['nameCompat'] = $sectionGroup.name | Remove-InvalidFileNameChars
         $cfg['levelsFromRoot'] = $LevelsFromRoot
         $cfg['uri'] = $sectionGroup.path # E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup
         $cfg['notesDirectory'] = [io.path]::combine( $NotesDestination.Replace('\', [io.path]::DirectorySeparatorChar), $cfg['nameCompat'] )
@@ -531,7 +521,7 @@ Function New-SectionGroupConversionConfig {
             $sectionCfg['sectionGroupName'] = $cfg['object'].name
             $sectionCfg['object'] = $section # Keep a reference to the Section object
             $sectionCfg['kind'] = 'Section'
-            $sectionCfg['nameCompat'] = $section.name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+            $sectionCfg['nameCompat'] = $section.name | Remove-InvalidFileNameChars
             $sectionCfg['levelsFromRoot'] = $cfg['levelsFromRoot'] + 1
             $sectionCfg['pathFromRoot'] = "$( $cfg['pathFromRoot'] )$( [io.path]::DirectorySeparatorChar )$( $sectionCfg['nameCompat'] )"
             $sectionCfg['uri'] = $section.path # E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup/mysection
@@ -552,7 +542,7 @@ Function New-SectionGroupConversionConfig {
                 $pageCfg['sectionName'] = $sectionCfg['object'].name
                 $pageCfg['object'] = $page # Keep a reference to my Page object
                 $pageCfg['kind'] = 'Page'
-                $pageCfg['nameCompat'] = $page.name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+                $pageCfg['nameCompat'] = $page.name | Remove-InvalidFileNameChars
                 $pageCfg['levelsFromRoot'] = $sectionCfg['levelsFromRoot']
                 $pageCfg['pathFromRoot'] = "$( $sectionCfg['pathFromRoot'] )$( [io.path]::DirectorySeparatorChar )$( $pageCfg['nameCompat'] )"
                 $pageCfg['uri'] = "$( $sectionCfg['object'].path )/$( $page.name )" # There's no $page.path property, so we generate one. E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup/mysection/mypage
@@ -639,7 +629,7 @@ Function New-SectionGroupConversionConfig {
                             foreach ($i in $insertedFiles) {
                                 $attachmentCfg = [ordered]@{}
                                 $attachmentCfg['object'] =  $i
-                                $attachmentCfg['nameCompat'] =  $i.preferredName | Remove-InvalidFileNameCharsInsertedFiles -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+                                $attachmentCfg['nameCompat'] =  $i.preferredName | Remove-InvalidFileNameCharsInsertedFiles
                                 $attachmentCfg['markdownFileName'] =  $attachmentCfg['nameCompat'].Replace("$", "\$").Replace("^", "\^").Replace("'", "\'")
                                 $attachmentCfg['source'] =  $i.pathCache
                                 $attachmentCfg['destination'] =  [io.path]::combine( $pageCfg['mediaPath'], $attachmentCfg['nameCompat'] )
