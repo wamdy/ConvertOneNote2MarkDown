@@ -1,5 +1,13 @@
 [CmdletBinding()]
-param ()
+param (
+    [Parameter()]
+    [string]
+    $ConversionConfigurationExportPath
+,
+    [Parameter()]
+    [switch]
+    $Exit
+)
 
 Function Validate-Dependencies {
     [CmdletBinding()]
@@ -27,6 +35,7 @@ Function Get-DefaultConfiguration {
 Specify folder path that will contain your resulting Notes structure - Default: c:\temp\notes
 '@
             default = 'c:\temp\notes'
+            value = 'c:\temp\notes'
             validateOptions = 'directoryexists'
         }
         targetNotebook = @{
@@ -36,6 +45,7 @@ Specify a notebook name to convert
 'mynotebook': Convert specific notebook named 'mynotebook'
 '@
             default = ''
+            value = ''
         }
         usedocx = @{
             description = @'
@@ -44,6 +54,7 @@ Whether to create new word docs or reuse existing ones
 2: Use existing .docx files (90% faster)
 '@
             default = 1
+            value = 1
             validateRange = 1,2
         }
         keepdocx = @{
@@ -53,6 +64,7 @@ Whether to discard word docs after conversion
 2: Keep .docx files
 '@
             default = 1
+            value = 1
             validateRange = 1,2
         }
         prefixFolders = @{
@@ -62,6 +74,7 @@ Whether to use prefix vs subfolders
 2: Add prefixes for subpages (e.g. Page_Subpage.md)
 '@
             default = 1
+            value = 1
             validateRange = 1,2
         }
         medialocation = @{
@@ -71,6 +84,7 @@ Whether to store media in single or multiple folders
 2: Separate 'media' folder for each folder in the hierarchy
 '@
             default = 1
+            value = 1
             validateRange = 1,2
         }
         conversion = @{
@@ -84,6 +98,7 @@ Specify conversion type
 6: markdown_strict (original unextended Markdown)
 '@
             default = 1
+            value = 1
             validateRange = 1,6
         }
         headerTimestampEnabled = @{
@@ -93,7 +108,8 @@ Whether to include page timestamp and separator at top of document
 2: Don't include
 '@
             default = 1
-            validateRange = 1,6
+            value = 1
+            validateRange = 1,2
         }
         keepspaces = @{
             description = @'
@@ -102,7 +118,8 @@ Whether to clear double spaces between bullets
 2: Keep double spaces
 '@
             default = 1
-            validateRange = 1,6
+            value = 1
+            validateRange = 1,2
         }
         keepescape = @{
             description = @'
@@ -111,7 +128,8 @@ Whether to clear escape symbols from md files
 2: Keep '\' symbol escape
 '@
             default = 1
-            validateRange = 1,6
+            value = 1
+            validateRange = 1,2
         }
         keepPathSpaces = @{
             description = @'
@@ -120,7 +138,8 @@ Whether to replace spaces with dashes i.e. '-' in file and folder names
 2: Keep spaces in file and folder names (1 space between words, removes preceding and trailing spaces)"
 '@
             default = 1
-            validateRange = 1,6
+            value = 1
+            validateRange = 1,2
         }
     }
 
@@ -167,7 +186,8 @@ Function Compile-Configuration {
     if (Test-Path $PSScriptRoot/config.ps1) {
         # Get override configuration from config file ./config.ps1
         & {
-            . $PSScriptRoot/config.ps1
+            $scriptblock = [scriptblock]::Create( (Get-Content $PSScriptRoot/config.ps1 -Raw) )
+            . $scriptblock
             foreach ($key in @($config.Keys)) {
                 $config[$key]['value'] = Get-Variable -Name $key -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Value
                 # Trim string
@@ -295,6 +315,9 @@ Function Remove-InvalidFileNameChars {
         [switch]$KeepPathSpaces
     )
 
+    # Remove boundary whitespaces. So we don't get trailing dashes
+    $Name = $Name.Trim()
+
     $newName = $Name.Split([IO.Path]::GetInvalidFileNameChars()) -join '-'
     $newName = $newName -replace "\[", "("
     $newName = $newName -replace "\]", ")"
@@ -304,7 +327,7 @@ Function Remove-InvalidFileNameChars {
                     $newName -replace "\s", "-"
                 }
     $newName = $newName.Substring(0, $(@{$true = 130; $false = $newName.length }[$newName.length -gt 150]))
-    return $newName.Trim() # Remove boundary whitespaces
+    return $newName
 }
 
 Function Remove-InvalidFileNameCharsInsertedFiles {
@@ -320,6 +343,9 @@ Function Remove-InvalidFileNameCharsInsertedFiles {
         [switch]$KeepPathSpaces
     )
 
+    # Remove boundary whitespaces. So we don't get trailing dashes
+    $Name = $Name.Trim()
+
     $rePattern = ($SpecialChars.ToCharArray() | ForEach-Object { [regex]::Escape($_) }) -join "|"
 
     $newName = $Name.Split([IO.Path]::GetInvalidFileNameChars()) -join '-'
@@ -329,7 +355,7 @@ Function Remove-InvalidFileNameCharsInsertedFiles {
                 } else {
                     $newName -replace "\s", "-"
                 }
-    return $newName.Trim() # Remove boundary whitespaces
+    return $newName
 }
 
 Function New-OneNoteConnection {
@@ -338,14 +364,20 @@ Function New-OneNoteConnection {
 
     # Create a OneNote connection. See: See: https://docs.microsoft.com/en-us/office/client-developer/onenote/application-interface-onenote
     if ($PSVersionTable.PSVersion.Major -le 5) {
-        $OneNote = New-Object -ComObject OneNote.Application
+        if ($OneNote = New-Object -ComObject OneNote.Application) {
+            $OneNote
+        }else {
+            throw "Failed to make connection to OneNote."
+        }
     }else {
         # Works between powershell 6.0 and 7.0, but not >= 7.1
-        Add-Type -Path $env:windir\assembly\GAC_MSIL\Microsoft.Office.Interop.OneNote\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.OneNote.dll # -PassThru
-        $OneNote = [Microsoft.Office.Interop.OneNote.ApplicationClass]::new()
+        if (Add-Type -Path $env:windir\assembly\GAC_MSIL\Microsoft.Office.Interop.OneNote\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.OneNote.dll -PassThru) {
+            $OneNote = [Microsoft.Office.Interop.OneNote.ApplicationClass]::new()
+            $OneNote
+        }else {
+            throw "Failed to make connection to OneNote."
+        }
     }
-
-    $OneNote
 }
 
 Function Remove-OneNoteConnection {
@@ -385,15 +417,15 @@ Function Get-OneNotePageContent {
     ,
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [int]
+        [string]
         $PageId
     )
 
     # Get page's xml content
-    [xml]$pagexml = ""
-    $OneNoteConnection.GetPageContent($page.ID, [ref]$pagexml, 7)
+    [xml]$page = ""
+    $OneNoteConnection.GetPageContent($PageId, [ref]$page, 7)
 
-    $pagexml
+    $page
 }
 
 Function Publish-OneNotePageToDocx {
@@ -406,7 +438,7 @@ Function Publish-OneNotePageToDocx {
     ,
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [int]
+        [string]
         $PageId
     ,
         [Parameter(Mandatory)]
@@ -425,6 +457,7 @@ Function New-SectionGroupConversionConfig {
         [object]
         $OneNoteConnection
     ,
+        # The desired directory to store any converted Page(s) found in this Section Group's Section(s)
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
         [string]
@@ -434,6 +467,7 @@ Function New-SectionGroupConversionConfig {
         [object]
         $Config
     ,
+        # Section Group XML object(s)
         [Parameter(Mandatory)]
         [array]
         $SectionGroups
@@ -451,6 +485,11 @@ Function New-SectionGroupConversionConfig {
 
     # Build an object representing the conversion of a Section Group (treat a Notebook as a Section Group, it is no different)
     foreach ($sectionGroup in $SectionGroups) {
+        # Skip over Section Groups in recycle bin
+        if ((Get-Member -InputObject $sectionGroup -Name 'isRecycleBin') -and $sectionGroup.isRecycleBin -eq 'true') {
+            continue
+        }
+
         $cfg = [ordered]@{}
 
         if ($LevelsFromRoot -eq 0) {
@@ -463,20 +502,21 @@ Function New-SectionGroupConversionConfig {
         $cfg = [ordered]@{}
         $cfg['object'] = $sectionGroup # Keep a reference to the SectionGroup object
         $cfg['kind'] = 'SectionGroup'
+        $cfg['nameCompat'] = $sectionGroup.name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
         $cfg['levelsFromRoot'] = $LevelsFromRoot
-        $cfg['uri'] = $sectionGroup.path # E.g. https://d.docs.live.net/01234567890abcde/Skydrive Notebooks/mynotebook/mysectiongroup
-        $cfg['fileName'] = $sectionGroup.name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
-        $cfg['notesDirectory'] = Join-Path $NotesDestination $cfg['fileName']
+        $cfg['uri'] = $sectionGroup.path # E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup
+        $cfg['notesDirectory'] = [io.path]::combine( $NotesDestination.Replace('\', [io.path]::DirectorySeparatorChar), $cfg['nameCompat'] )
         $cfg['notesBaseDirectory'] = & {
             # E.g. 'c:\temp\notes\mynotebook\mysectiongroup'
             # E.g. levelsFromRoot: 1
-            $split = $cfg['notesDirectory'].Split([IO.Path]::DirectorySeparatorChar)
+            $split = $cfg['notesDirectory'].Split( [io.path]::DirectorySeparatorChar )
             # E.g. 5
             $totalLevels = $split.Count
             # E.g. 0..(5-1-1) -> 'c:\temp\notes\mynotebook'
-            $split[0..($totalLevels - $cfg['levelsFromRoot'] - 1)] -join [IO.Path]::DirectorySeparatorChar
+            $split[0..($totalLevels - $cfg['levelsFromRoot'] - 1)] -join [io.path]::DirectorySeparatorChar
         }
-        $cfg['notesDocxDirectory'] = Join-Path $cfg['notesBaseDirectory'] 'docx'
+        $cfg['pathFromRoot'] = $cfg['notesDirectory'].Replace($cfg['notesBaseDirectory'], '')
+        $cfg['notesDocxDirectory'] = [io.path]::combine( $cfg['notesBaseDirectory'], 'docx' )
         $cfg['directoriesToCreate'] = @()
 
         # Build this Section Group's sections
@@ -485,12 +525,17 @@ Function New-SectionGroupConversionConfig {
             "$( '#' * ($LevelsFromRoot + 1) ) Building conversion configuration for $( $section.name ) [Section]" | Write-Host -ForegroundColor DarkGray
 
             $sectionCfg = [ordered]@{}
+            $sectionCfg['notesBaseDirectory'] = $cfg['notesBaseDirectory']
+            $sectionCfg['notesDirectory'] = $cfg['notesDirectory']
+            $sectionCfg['sectionGroupUri'] = $cfg['uri'] # Keep a reference to mt Section Group Configuration object's uri
+            $sectionCfg['sectionGroupName'] = $cfg['object'].name
             $sectionCfg['object'] = $section # Keep a reference to the Section object
             $sectionCfg['kind'] = 'Section'
+            $sectionCfg['nameCompat'] = $section.name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
             $sectionCfg['levelsFromRoot'] = $cfg['levelsFromRoot'] + 1
-            $sectionCfg['uri'] = $section.path # E.g. https://d.docs.live.net/01234567890abcde/Skydrive Notebooks/mynotebook/mysectiongroup/mysection
+            $sectionCfg['pathFromRoot'] = "$( $cfg['pathFromRoot'] )$( [io.path]::DirectorySeparatorChar )$( $sectionCfg['nameCompat'] )"
+            $sectionCfg['uri'] = $section.path # E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup/mysection
             $sectionCfg['lastModifiedTime'] = [Datetime]::ParseExact($section.lastModifiedTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
-            $sectionCfg['fileName'] = $section.name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
             $sectionCfg['pages'] = [System.Collections.ArrayList]@()
 
             # Build Section's pages
@@ -499,15 +544,21 @@ Function New-SectionGroupConversionConfig {
 
                 $previousPage = if ($sectionCfg['pages'].Count -gt 0) { $sectionCfg['pages'][$sectionCfg['pages'].Count - 1] } else { $null }
                 $pageCfg = [ordered]@{}
-                $pageCfg['object'] = $page # Keep a reference to the Page object
+                $pageCfg['notesBaseDirectory'] = $cfg['notesBaseDirectory']
+                $pageCfg['notesDirectory'] = $cfg['notesDirectory']
+                $pageCfg['sectionGroupUri'] = $cfg['uri'] # Keep a reference to mt Section Group Configuration object's uri
+                $pageCfg['sectionGroupName'] = $cfg['object'].name
+                $pageCfg['sectionUri'] = $sectionCfg['uri'] # Keep a reference to my Section Configuration object's uri
+                $pageCfg['sectionName'] = $sectionCfg['object'].name
+                $pageCfg['object'] = $page # Keep a reference to my Page object
                 $pageCfg['kind'] = 'Page'
+                $pageCfg['nameCompat'] = $page.name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
                 $pageCfg['levelsFromRoot'] = $sectionCfg['levelsFromRoot']
-                # There's no $page.path property, so we generate one
-                $pageCfg['uri'] = "$( $sectionCfg['object'].path )/$( $page.name )" # E.g. https://d.docs.live.net/01234567890abcde/Skydrive Notebooks/mynotebook/mysectiongroup/mysection/mypage
+                $pageCfg['pathFromRoot'] = "$( $sectionCfg['pathFromRoot'] )$( [io.path]::DirectorySeparatorChar )$( $pageCfg['nameCompat'] )"
+                $pageCfg['uri'] = "$( $sectionCfg['object'].path )/$( $page.name )" # There's no $page.path property, so we generate one. E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup/mysection/mypage
                 $pageCfg['dateTime'] = [Datetime]::ParseExact($page.dateTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
                 $pageCfg['lastModifiedTime'] = [Datetime]::ParseExact($page.lastModifiedTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
                 $pageCfg['pageLevel'] = $page.pageLevel -as [int]
-                $pageFileNameDesired = $page.name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
                 $pageCfg['converter'] = switch ($config['conversion']['value']) {
                     1 { 'markdown' }
                     2 { 'commonmark' }
@@ -517,84 +568,84 @@ Function New-SectionGroupConversionConfig {
                     6 { 'markdown_strict' }
                     default { 'markdown' }
                 }
-                $pageCfg['prefixjoiner'] = if ($config['prefixFolders']['value'] -eq 2) { '_' } else { '\' }
                 $pageCfg['pagePrefix'] = switch ($pageCfg['pageLevel']) {
                     # process for subpage prefixes
                     1 {
                         ''
                     }
                     2 {
-                        if ($null -ne $previousPage -and $previousPage['pageLevel'] -eq 1) {
-                            $previousPage['fileName']
+                        if ($previousPage) {
+                            "$( $previousPage['filePathRel'] )$( [io.path]::DirectorySeparatorChar )"
                         }else {
                             ''
                         }
                     }
                     3 {
-                        if ($null -ne $previousPage -and $previousPage['pageLevel'] -eq 2) {
-                            "$( $previousPage['pagePrefix'] )$( $pageCfg['prefixjoiner'] )$( $previousPage['fileName'] )"
-                        }
-                        # level 3 under level 1, without a level 2
-                        elseif ($null -ne $previousPage -and $previousPage['pageLevel'] -eq 1) {
-                            "$( $previousPage['fileName'] )$( $pageCfg['prefixjoiner'] )"
+                        if ($previousPage) {
+                            "$( $previousPage['filePathRel'] )$( [io.path]::DirectorySeparatorChar )"
+                        }else {
+                            ''
                         }
                     }
                     default {
                         ''
                     }
                 }
-                $pageCfg['fullexportdirpath'] = if ($pageCfg['pagePrefix'] -and $config['prefixFolders']['value'] -eq 1) {
-                    Join-Path ( Join-Path $cfg['notesDirectory'] $sectionCfg['fileName'] ) $pageCfg['pagePrefix']
-                }else {
-                    Join-Path $cfg['notesDirectory'] $sectionCfg['fileName']
-                }
-                $pageCfg['fullfilepathwithoutextension'] = & {
-                    $fullfilepathwithoutextensionDesired = Join-Path $pageCfg['fullexportdirpath'] $pageFileNameDesired
+                $pageCfg['filePathRel'] = & {
+                    $filePathRel = "$( $pageCfg['pagePrefix'] )$( $pageCfg['nameCompat'] )"
+
                     # in case multiple pages with the same name exist in a section, postfix the filename
                     $recurrence = 0
                     foreach ($p in $sectionCfg['pages']) {
-                        if ($p['fullfilepathwithoutextension'] -eq $fullfilepathwithoutextensionDesired) {
+                        if ($p['filePathRel'] -eq $filePathRel) {
                             $recurrence++
                         }
                     }
                     if ($recurrence -gt 0) {
-                        "$fullfilepathwithoutextensionDesired-$recurrence"
-                    }else {
-                        $fullfilepathwithoutextensionDesired
+                        $filePathRel = "$filePathRel-$recurrence"
                     }
+                    $filePathRel
                 }
-                $pageCfg['fileName'] = Split-Path $pageCfg['fullfilepathwithoutextension'] -Leaf
+                $pageCfg['filePathRelUnderscore'] = $pageCfg['filePathRel'].Replace( [io.path]::DirectorySeparatorChar, '_' )
+                $pageCfg['mdFileName'] = Split-Path $pageCfg['filePathRel'] -Leaf
+                $pageCfg['fullfilepathwithoutextension'] = if ($config['prefixFolders']['value'] -eq 2) {
+                    [io.path]::combine( $cfg['notesDirectory'], $sectionCfg['nameCompat'], $pageCfg['filePathRelUnderscore'] )
+                }else {
+                    [io.path]::combine( $cfg['notesDirectory'], $sectionCfg['nameCompat'], $pageCfg['filePathRel'] )
+                }
+                $pageCfg['fullexportdirpath'] = Split-Path $pageCfg['fullfilepathwithoutextension'] -Parent
                 $pageCfg['levelsPrefix'] = if ($config['medialocation']['value'] -eq 2) {
                     ''
                 }else {
                     "$( '../' * ($pageCfg['levelsFromRoot'] + $pageCfg['pageLevel'] - 1) )"
                 }
-                $pageCfg['mediaParentPath'] = & {
-                    # Normalize markdown media paths to use front slashes, i.e. '/' and lowercased drive letter
-                    $s = if ($config['medialocation']['value'] -eq 2) {
-                        $pageCfg['fullexportdirpath'].Replace('\', '/')
-                    }else {
-                        $cfg['notesBaseDirectory'].Replace('\', '/')
-                    }
-                    $s.Substring(0, 1).tolower() + $s.Substring(1)
+                $pageCfg['mediaParentPath'] = if ($config['medialocation']['value'] -eq 2) {
+                    $pageCfg['fullexportdirpath']
+                }else {
+                    $cfg['notesBaseDirectory']
                 }
-                $pageCfg['mediaPath'] = "$( $pageCfg['mediaParentPath'] )/media" # Normalize markdown media paths to use front slashes
-                $pageCfg['fullexportpath'] = Join-Path $cfg['notesDocxDirectory'] "$( $pageCfg['fileName'] ).docx"
+                $pageCfg['mediaPath'] = [io.path]::combine( $pageCfg['mediaParentPath'], 'media' )
+                $pageCfg['mediaParentPath'] = Split-Path $pageCfg['mediaPath'] -Parent
+                $pageCfg['mediaPathPandoc'] = $pageCfg['mediaPath'].Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
+                $pageCfg['mediaParentPathPandoc'] = (Split-Path $pageCfg['mediaPathPandoc'] -Parent).Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
+                $pageCfg['fullexportpath'] = [io.path]::combine( $cfg['notesDocxDirectory'], "$( $pageCfg['mdFileName'] ).docx" )
                 $pageCfg['insertedAttachments'] = @(
                     & {
-                        $pagexml = Get-OneNotePageContent -OneNoteConnection $OneNoteConnection -PageId $page.$id
+                        $pagexml = Get-OneNotePageContent -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID
 
                         # Get any attachment(s) found in pages
-                        $insertedFiles = $pagexml.Page.Outline.OEChildren.OE | Where-Object { $null -ne $_ -and (Get-Member -InputObject $_ -Name 'InsertedFile' -Membertype Properties) } | ForEach-Object { $_.InsertedFile }
-                        foreach ($i in $insertedFiles) {
-                            $attachmentCfg = [ordered]@{}
-                            $attachmentCfg['object'] =  $i
-                            $attachmentCfg['fileName'] =  $i.preferredName | Remove-InvalidFileNameCharsInsertedFiles -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
-                            $attachmentCfg['markdownFileName'] =  $attachmentCfg['fileName'].Replace("$", "\$").Replace("^", "\^").Replace("'", "\'")
-                            $attachmentCfg['source'] =  $i.pathCache
-                            $attachmentCfg['destination'] =  Join-Path $pageCfg['mediaPath'] $attachmentCfg['fileName']
+                        if (Get-Member -InputObject $pagexml.Page -Name 'Outline') {
+                            $insertedFiles = $pagexml.Page.Outline.OEChildren.OE | Where-Object { $null -ne $_ -and (Get-Member -InputObject $_ -Name 'InsertedFile') } | ForEach-Object { $_.InsertedFile }
+                            foreach ($i in $insertedFiles) {
+                                $attachmentCfg = [ordered]@{}
+                                $attachmentCfg['object'] =  $i
+                                $attachmentCfg['nameCompat'] =  $i.preferredName | Remove-InvalidFileNameCharsInsertedFiles -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+                                $attachmentCfg['markdownFileName'] =  $attachmentCfg['nameCompat'].Replace("$", "\$").Replace("^", "\^").Replace("'", "\'")
+                                $attachmentCfg['source'] =  $i.pathCache
+                                $attachmentCfg['destination'] =  [io.path]::combine( $pageCfg['mediaPath'], $attachmentCfg['nameCompat'] )
 
-                            $attachmentCfg
+                                $attachmentCfg
+                            }
                         }
                     }
                 )
@@ -603,11 +654,11 @@ Function New-SectionGroupConversionConfig {
 
                     foreach ($attachmentCfg in $pageCfg['insertedAttachments']) {
                         @{
-                            description = 'Change MD file Object Name References'
+                            description = 'Change inserted attachment(s) filename references'
                             replacements = @(
                                 @{
                                     searchRegex = [regex]::Escape( $attachmentCfg['object'].preferredName )
-                                    replacement = "[$( $attachmentCfg['markdownFileName'] )]($( $pageCfg['mediaPath'] )/$( $attachmentCfg['markdownFileName'] ))"
+                                    replacement = "[$( $attachmentCfg['markdownFileName'] )]($( $pageCfg['mediaPathPandoc'] )/$( $attachmentCfg['markdownFileName'] ))"
                                 }
                             )
                         }
@@ -615,9 +666,9 @@ Function New-SectionGroupConversionConfig {
                     @{
                         description = 'Replace media (e.g. images, attachments) absolute paths with relative paths'
                         replacements = @(
-                            # E.g. 'c:/temp/notes/mynotebook/media/image1.jpg' -> '../media/image1.jpg'
                             @{
-                                searchRegex = [regex]::Escape("$( $pageCfg['mediaParentPath'] )/")
+                                # E.g. 'C:/temp/notes/mynotebook/media/somepage-image1-timestamp.jpg' -> '../media/somepage-image1-timestamp.jpg'
+                                searchRegex = [regex]::Escape("$( $pageCfg['mediaParentPathPandoc'] )/") # Add a trailing front slash
                                 replacement = $pageCfg['levelsPrefix']
                             }
                         )
@@ -640,15 +691,15 @@ Function New-SectionGroupConversionConfig {
                     }
                     if ($config['keepspaces']['value'] -eq 1 ) {
                         @{
-                            description = 'Clear double spaces from bullets and nonbreaking spaces from blank lines'
+                            description = 'Clear double spaces from bullets and non-breaking spaces spaces from blank lines'
                             replacements = @(
                                 @{
                                     searchRegex = [regex]::Escape([char]0x00A0)
                                     replacement = ''
                                 }
                                 @{
-                                    searchRegex = "`r?`n`r?`n- "
-                                    replacement = "`r`n`- "
+                                    searchRegex = '\r?\n\r?\n- '
+                                    replacement = "`r`n- "
                                 }
                             )
                         }
@@ -665,17 +716,16 @@ Function New-SectionGroupConversionConfig {
                         }
                     }
                 )
-
                 $pageCfg['directoriesToCreate'] = @(
                     # The directories to be created
-                    $cfg['notesDocxDirectory']
-                    $cfg['notesDirectory']
-                    $pageCfg['fullexportdirpath']
-                    if ($pageCfg['pagePrefix'] -and $config['prefixFolders']['value'] -eq 2) {
-                        Join-Path $pageCfg['fullexportdirpath'] $pageCfg['pagePrefix']
-                    }
-                    $pageCfg['mediaPath']
+                    @(
+                        $cfg['notesDocxDirectory']
+                        $cfg['notesDirectory']
+                        $pageCfg['fullexportdirpath']
+                        $pageCfg['mediaPath']
+                    ) | Select-Object -Unique
                 )
+                $pageCfg['directorySeparatorChar'] = [io.path]::DirectorySeparatorChar
 
                 # Populate the pages array (needed even when -AsArray switch is not on, because we need this section's pages' state to know whether there are duplicate page names)
                 $sectionCfg['pages'].Add( $pageCfg ) > $null
@@ -693,13 +743,12 @@ Function New-SectionGroupConversionConfig {
         }
 
         # Build this Section Group's Section Groups
-        if ($sectiongroup.SectionGroup) {
-            # $sectionGroupName = $sectionGroup.Name | Remove-InvalidFileNameChars -KeepPathSpaces:($config['keepPathSpaces']['value'] -eq 2)
+        if ((Get-Member -InputObject $sectionGroup -Name 'SectionGroup')) {
             if ($AsArray) {
-                $cfg['sectionGroups'] = New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $cfg['notesDirectory'] -Config $Config -SectionGroups $sectiongroup.SectionGroup -LevelsFromRoot ($LevelsFromRoot + 1) -AsArray:$AsArray
+                $cfg['sectionGroups'] = New-SectionGroupConversionConfig -OneNoteConnection $OneNoteConnection -NotesDestination $cfg['notesDirectory'] -Config $Config -SectionGroups $sectionGroup.SectionGroup -LevelsFromRoot ($LevelsFromRoot + 1) -AsArray:$AsArray
             }else {
                 # Send the configuration immediately down the pipeline
-                New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $cfg['notesDirectory'] -Config $Config -SectionGroups $sectiongroup.SectionGroup -LevelsFromRoot ($LevelsFromRoot + 1)
+                New-SectionGroupConversionConfig -OneNoteConnection $OneNoteConnection -NotesDestination $cfg['notesDirectory'] -Config $Config -SectionGroups $sectionGroup.SectionGroup -LevelsFromRoot ($LevelsFromRoot + 1)
             }
         }
 
@@ -757,8 +806,8 @@ Function Convert-OneNotePage {
             # Create directories
             foreach ($d in $pageCfg['directoriesToCreate']) {
                 try {
+                    "Directory: $( $d )" | Write-Verbose
                     $item = New-Item -Path $d -ItemType Directory -Force -ErrorAction Stop
-                    "Directory: $( $item.FullName )" | Write-Verbose
                 }catch {
                     throw "Failed to create directory '$d': $( $_.Exception.Message )"
                 }
@@ -767,20 +816,20 @@ Function Convert-OneNotePage {
             if ($config['usedocx']['value'] -eq 1) {
                 # Remove any existing docx files, don't proceed if it fails
                 try {
-                    Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction SilentlyContinue
                     "Removing existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
+                    Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
                 }catch {
-                    throw "Error removing intermediary '$( $pageCfg['object'].name )' docx file: $( $_.Exception.Message )"
+                    throw "Error removing intermediary docx file $( $pageCfg['fullexportpath'] ): $( $_.Exception.Message )"
                 }
             }
 
             # Publish OneNote page to Word, don't proceed if it fails
             if (! (Test-Path $pageCfg['fullexportpath']) ) {
                 try {
-                    $OneNoteConnection.Publish($pageCfg['object'].ID, $pageCfg['fullexportpath'], "pfWord", "")
-                    "New docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
+                    "Publishing new docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
+                    Publish-OneNotePageToDocx -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['fullexportpath']
                 }catch {
-                    throw "Error while publishing file '$( $pageCfg['object'].name )' to docx: $( $_.Exception.Message )"
+                    throw "Error while publishing page to docx file $( $pageCfg['object'].name ): $( $_.Exception.Message )"
                 }
             }else {
                 "Existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
@@ -789,81 +838,97 @@ Function Convert-OneNotePage {
             # https://gist.github.com/heardk/ded40b72056cee33abb18f3724e0a580
             # Convert .docx to .md, don't proceed if it fails
             try {
-                pandoc.exe -f  docx -t "$( $pageCfg['converter'] )-simple_tables-multiline_tables-grid_tables+pipe_tables" -i $pageCfg['fullexportpath'] -o "$( $pageCfg['fullfilepathwithoutextension'] ).md" --wrap=none --markdown-headings=atx --extract-media="$( $pageCfg['mediaParentPath'] )" # extracts into ./media of the supplied folder
                 "Converting docx file to markdown file: $( $pageCfg['fullfilepathwithoutextension'] ).md" | Write-Verbose
+                $process = Start-Process -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList @( '-f', 'docx', '-t', "$( $pageCfg['converter'] )-simple_tables-multiline_tables-grid_tables+pipe_tables", '-i', $pageCfg['fullexportpath'], '-o', "$( $pageCfg['fullfilepathwithoutextension'] ).md", '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" ) # extracts into ./media of the supplied folder
+                if ($process.ExitCode) {
+                    throw 'pandoc failed to convert'
+                }
             }catch {
-                throw "Error while converting file '$( $pageCfg['object'].name )' to md: $( $_.Exception.Message )"
+                throw "Error while converting docx file $( $pageCfg['fullexportpath'] ) to markdown file $( $pageCfg['fullfilepathwithoutextension'] ).md: $( $_.Exception.Message )"
             }
 
             # Cleanup Word files
             if ($config['keepdocx']['value'] -eq 1) {
                 try {
-                    Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
                     "Removing existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
+                    Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
                 }catch {
-                    Write-Error "Error removing intermediary '$( $pageCfg['object'].name )' docx file: $( $_.Exception.Message )"
+                    Write-Error "Error removing intermediary docx file $( $pageCfg['fullexportpath'] ): $( $_.Exception.Message )"
                 }
             }
 
-            # Export any attachments
+            # Save any attachments
             foreach ($attachmentCfg in $pageCfg['insertedAttachments']) {
                 try {
-                    Copy-Item -Path $attachmentCfg['source'] -Destination $attachmentCfg['destination'] -Force
                     "Saving inserted attachment: $( $attachmentCfg['destination'] )" | Write-Verbose
+                    Copy-Item -Path $attachmentCfg['source'] -Destination $attachmentCfg['destination'] -Force -ErrorAction Stop
                 }catch {
-                    Write-Error "Error while copying file object '$($pageinsertedfile.InsertedFile.preferredName)' for page '$( $pageCfg['object'].name )': $( $_.Exception.Message )"
+                    Write-Error "Error while saving attachment from $( $attachmentCfg['source'] ) to $( $attachmentCfg['destination'] ): $( $_.Exception.Message )"
                 }
             }
 
-            # rename images to have unique names - NoteName-Image#-HHmmssff.xyz
+            # Rename images to have unique names - NoteName-Image#-HHmmssff.xyz
             $timeStamp = (Get-Date -Format HHmmssff).ToString()
             $timeStamp = $timeStamp.replace(':', '')
-            $images = Get-ChildItem -Path "$( $pageCfg['mediaPath'] )" -Include "*.png", "*.gif", "*.jpg", "*.jpeg" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name.SubString(0, 5) -match "image" }
+            $images = Get-ChildItem -Path "$( $pageCfg['mediaPath'] )" -Include "*.png", "*.gif", "*.jpg", "*.jpeg" -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name.SubString(0, 5) -match "image" }
             foreach ($image in $images) {
-                $newimageName = "$($( $pageCfg['fileName'] ).SubString(0,[math]::min(30,$( $pageCfg['fileName'] ).length)))-$($image.BaseName)-$($timeStamp)$($image.Extension)"
+                $newimageName = "$($( $pageCfg['mdFileName'] ).SubString(0,[math]::min(30,$( $pageCfg['mdFileName'] ).length)))-$($image.BaseName)-$($timeStamp)$($image.Extension)"
                 # Rename Image
                 try {
-                    $item = Rename-Item -Path "$( $image.FullName )" -NewName $newimageName -ErrorAction SilentlyContinue -PassThru
                     "Renaming image: $( $image.FullName ) to $( $item.FullName )" | Write-Verbose
+                    $item = Rename-Item -Path "$( $image.FullName )" -NewName $newimageName -ErrorAction Stop -PassThru
                 }catch {
-                    Write-Error "Error while renaming image $( $image.FullName ) to $( $item.FullName ) for page '$( $pageCfg['object'].name )': $( $_.Exception.Message )"
+                    Write-Error "Error while renaming image $( $image.FullName ) to $( $item.FullName ): $( $_.Exception.Message )"
                 }
                 # Change MD file Image filename References
                 try {
-                    ((Get-Content -path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Raw).Replace("$($image.Name)", "$($newimageName)")) | Set-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md"
                     "Mutation of markdown: Rename image references to unique name" | Write-Verbose
+                    $content = Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Raw -ErrorAction Stop # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
+                    $content = $content.Replace("$($image.Name)", "$($newimageName)")
+                    Set-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
                 }catch {
-                    Write-Error "Error while renaming image file name references to '$( $newimageName )' for file '$( $pageCfg['object'].name )': $( $_.Exception.Message )"
+                    Write-Error "Error while renaming image file name references to '$( $newimageName ): $( $_.Exception.Message )"
                 }
             }
 
-            # Get markdown content
-            $orig = @( Get-Content -path "$( $pageCfg['fullfilepathwithoutextension'] ).md" )
-            $orig = @(
-                if ($orig.Count -gt 6) {
-                    # Discard first 6 lines which contain a header, created date, and time. We are going to add our own header
-                    $orig[6..($orig.Count - 1)]
-                }else {
-                    # Empty page
-                    ''
-                }
-            ) -join "`r`n"
+            # Mutate markdown content
+            try {
+                # Get markdown content
+                $content = @( Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -ErrorAction Stop )  # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
+                $content = @(
+                    if ($content.Count -gt 6) {
+                        # Discard first 6 lines which contain a header, created date, and time. We are going to add our own header
+                        $content[6..($content.Count - 1)]
+                    }else {
+                        # Empty page
+                        ''
+                    }
+                ) -join "`r`n"
 
-            # Perform mutations on markdown content
-            foreach ($m in $pageCfg['mutations']) {
-                "Mutation of markdown: $( $m['description'] )" | Write-Verbose
-                foreach ($r in $m['replacements']) {
-                    $orig = $orig -replace $r['searchRegex'], $r['replacement']
+                # Mutate
+                foreach ($m in $pageCfg['mutations']) {
+                    foreach ($r in $m['replacements']) {
+                        try {
+                            "Mutation of markdown: $( $m['description'] )" | Write-Verbose
+                            $content = $content -replace $r['searchRegex'], $r['replacement']
+                        }catch {
+                            Write-Error "Failed to mutating markdown content with mutation '$( $m['description'] )': $( $_.Exception.Message )"
+                        }
+                    }
                 }
+                Set-Content "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
+            }catch {
+                Write-Error "Error while mutating markdown content: $( $_.Exception.Message )"
             }
-            Set-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $orig
-            "Markdown file ready: $( $pageCfg['fullfilepathwithoutextension'] ).md" | Write-Verbose
+
+            "Markdown file ready: $( $pageCfg['fullfilepathwithoutextension'] ).md" | Write-Host -ForegroundColor Green
         }catch {
-            Write-Error "Failed to convert page '$( $pageCfg['uri'] )'"
+            Write-Error "Failed to convert page of name: $( $pageCfg['object'].name ), node: $( $pageCfg['filePathRel'] ). Reason: $( $_.Exception.Message )"
         }
     }
 }
 
+# Unused
 Function Convert-OneNoteSectionGroup {
     [CmdletBinding()]
     param (
@@ -920,13 +985,17 @@ Function Print-ConversionErrors {
 
     if ($ErrorCollection.Count -gt 0) {
         "Conversion errors: " | Write-Host
-        $ErrorCollection | Where-Object { (Get-Member -InputObject $_ -Name 'CategoryInfo' -Membertype Properties) -and ($_.CategoryInfo.Reason -eq $ExceptionName) } | Write-Host
+        $ErrorCollection | Where-Object { (Get-Member -InputObject $_ -Name 'CategoryInfo') -and ($_.CategoryInfo.Reason -match 'WriteErrorException') } | Write-Host
     }
 }
 
 Function Convert-OneNote2MarkDown {
     [CmdletBinding()]
-    param ()
+    param (
+        [Parameter()]
+        [string]
+        $ConversionConfigurationExportPath
+    )
 
     try {
         # Fix encoding problems for languages other than English
@@ -952,7 +1021,7 @@ Function Convert-OneNote2MarkDown {
         # Get and validate the notebook(s) to convert
         $notebooks = @(
             if ($config['targetNotebook']['value']) {
-                $hierarchy.Notebooks.Notebook | Where-Object { $_.Name -eq $config['targetNotebook']['value'] }
+                $hierarchy.Notebooks.Notebook | Where-Object { $_.Name -match $config['targetNotebook']['value'] }
             }else {
                 $hierarchy.Notebooks.Notebook
             }
@@ -967,10 +1036,21 @@ Function Convert-OneNote2MarkDown {
 
         # Convert the notebook(s)
         "`nConverting notes..." | Write-Host -ForegroundColor Cyan
-        New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $config['notesdestpath']['value'] -Config $config -SectionGroups $notebooks -LevelsFromRoot 0 -ErrorVariable +totalerr | Convert-OneNotePage -OneNoteConnection $OneNote -Config $config -ErrorVariable +totalerr
+        New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $config['notesdestpath']['value'] -Config $config -SectionGroups $notebooks -LevelsFromRoot 0 -ErrorVariable +totalerr | Tee-Object -Variable pageConversionConfigs | Convert-OneNotePage -OneNoteConnection $OneNote -Config $config -ErrorVariable +totalerr
         "Done converting notes." | Write-Host -ForegroundColor Cyan
+
+        # Export all Page Conversion Configuration objects as .json, which is useful for debugging
+        if ($ConversionConfigurationExportPath) {
+            "Exporting Page Conversion Configuration as JSON file: $ConversionConfigurationExportPath" | Write-Host -ForegroundColor Cyan
+            $pageConversionConfigs | ConvertTo-Json -Depth 100 | Out-File $ConversionConfigurationExportPath -Encoding utf8 -Force
+        }
+
     }catch {
-        throw
+        if ($ErrorActionPreference -eq 'Stop') {
+            throw
+        }else {
+            Write-Error -ErrorRecord $_
+        }
     }finally {
         'Cleaning up...' | Write-Host -ForegroundColor Cyan
 
@@ -985,5 +1065,10 @@ Function Convert-OneNote2MarkDown {
     }
 }
 
-# Entrypoint
-Convert-OneNote2MarkDown
+if (!$Exit) {
+    # Entrypoint
+    $params = @{
+        ConversionConfigurationExportPath = $ConversionConfigurationExportPath
+    }
+    Convert-OneNote2MarkDown @params
+}
