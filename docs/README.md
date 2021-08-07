@@ -24,16 +24,17 @@ Ready to make the step to Markdown and saying farewell to your OneNote, EverNote
 
 The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote Object Model on your workstation to convert all OneNote pages to Word documents and then utilizes PanDoc to convert the Word documents to Markdown (.md) format. It will also:
 
-* Create a **folder structure** for your Notebooks and Sections
+* Allows to choose to do a dry run or run the actual conversion.
+* Creates a **folder structure** for your Notebooks and Sections
 * Process pages that are in sections at the **Notebook, Section Group and all Nested Section Group levels**
-* Allow you to choose between **converting a specific notebook or all notebooks**
-* Allow you to **choose between creating subfolders for subpages** (e.g. Page\Subpage.md) or **appending prefixes** (e.g. Page_Subpage.md)
-* Allow you you choose between putting all **Images** in a central '/media' folder for each notebook, or in a separate '/media' folder in each folder of the hierarchy
-* Fix image references in the resulting .md files, generating *relative* references to the image files within the markdown document
-* Extract all **File Objects** to the same folder as Images and fix references in the resulting .md files. Symbols in file names removed for link compatibility.
-* Can choose between **discarding or keeping intermediate Word files**. Intermedia Word files are stored in a central notebook folder.
-* Allow to choose between converting from existing docx (90% faster) and creating new ones - useful if just want to test differences in the various processing options without generating new docx each time
-* Allow user can **select which markdown format will be used**, defaulting to Pandoc's standard format, which strips any HTML from tables along with other desirable (for me) formatting choices.
+* Allows to choose between **converting a specific notebook or all notebooks**
+* Allows to **choose between creating subfolders for subpages** (e.g. Page\Subpage.md) or **appending prefixes** (e.g. Page_Subpage.md)
+* Allows to choose between putting all **Images** in a central '/media' folder for each notebook, or in a separate '/media' folder in each folder of the hierarchy
+* Updates image references in the resulting .md files, generating *relative* references to the image files within the markdown document
+* Extracts all **File Objects** to the same folder as Images and fix references in the resulting .md files. Symbols in file names removed for link compatibility.
+* Allows to choose between **discarding or keeping intermediate Word files**. Intermedia Word files are stored in a central notebook folder.
+* Allows to choose between converting from existing docx (90% faster) and creating new ones - useful if just want to test differences in the various processing options without generating new docx each time
+* Allows to **select which markdown format will be used**, defaulting to Pandoc's standard format, which strips any HTML from tables along with other desirable (for me) formatting choices.
    * markdown (Pandoc’s Markdown)
    * commonmark (CommonMark Markdown)
    * gfm (GitHub-Flavored Markdown), or the deprecated and less accurate markdown_github; use markdown_github only if you need extensions not supported in gfm.
@@ -41,10 +42,11 @@ The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote 
    * markdown_phpextra (PHP Markdown Extra)
    * markdown_strict (original unextended Markdown)
 * See more details on these options here: https://pandoc.org/MANUAL.html#options
-* Allow to choose whether to include page timestamp and a separator at top of document
+* Allows to choose whether to include page timestamp and a separator at top of document
   * Improved file headers, with title now as a # heading, standardized DateTime format, and horizontal line to separate from rest of document
-* Remove double spaces and `\` escape symbol that are created when converting with Pandoc
-* Detailed logs. Run the script with `-Verbose` to see detailed logs of each page's conversion.
+* Alllos to choose whether to remove double spaces between bullet points that are created when converting with Pandoc
+* Allows to choose whether to remove `\` escape symbol that are created when converting with Pandoc
+* Allows Detailed logging. Run the script with `-Verbose` to see detailed logs of each page's conversion.
 
 ## Known Issues
 
@@ -88,6 +90,7 @@ Clone this repository to acquire the powershell script.
     * Run the macro for each Notebook that is open
 1. It is highly recommended that you use VS Code, and its embedded Powershell terminal, as this allows you to edit and run the script, as well as check the results of the .md output all in one window.
 1. If you prefer to use a configuration file, rename `config.example.ps1` to `config.ps1` and configure options in `config.ps1` to your liking.
+   1. You may like to use `$dryRun = 2` to do a dry run first. This is useful for trying out different settings until you find one you like.
 1. Whatever you choose, open a PowerShell terminal and navigate to the folder containing the script and run it.
 
     ```.\ConvertOneNote2MarkDown-v2.ps1```
@@ -102,6 +105,7 @@ Clone this repository to acquire the powershell script.
 
 
 1. If you chose to use a configuration file `config.ps1`, skip to the next step. If you did not choose to use a configuration file, the script will ask you for configuration interactively.
+    * It starts off asking whether to do a dry run. This is useful for trying out different settings until you find one you like.
     * It will ask you for the path to store the markdown folder structure. Please use an empty folder. If using VS Code, you might not be able to paste the filepath - right click on the blinking cursor and it will paste from clipboard.
 
     * **Attention:** use a full absolute path for the destination
