@@ -39,6 +39,7 @@ Describe "Compile-Configuration" -Tag 'Unit' {
             Mock Test-Path { $true }
             Mock Get-Content {
                 @'
+$dryrun = 1
 $notesdestpath = 'c:\temp\notes\/ ' # Deliberately add a trailing slah(es) and space
 $targetNotebook = '   ' # Deliberately add extra spaces
 $usedocx = 1
@@ -61,43 +62,17 @@ $keepescape = 1
         }
 
         It "Compiles configuration from interactive prompts: cast input as expected type, and fallback on default values on empty input" {
+            $fakeUserInputs = Get-DefaultConfiguration
+            $fakeUserInputs['notesdestpath']['value'] = 'c:\foo\bar' # Should be intact
+            $fakeUserInputs['targetNotebook']['value'] = $null # Should fallback on default value
+            $fakeUserInputs['usedocx']['value'] = '1' # Should be casted to an int
+            $fakeUserInputs['keepdocx']['value'] = $null # Should fallback on default value
             Mock Test-Path { $false }
-            $fakeUserInputs = [ordered]@{
-                notesdestpath = @{
-                    value = 'c:\foo\bar' # Should be intact
-                }
-                targetNotebook = @{
-                    value = $null # Should fallback on default value
-                }
-                usedocx = @{
-                    value = '1' # Should be casted to an int
-                }
-                keepdocx = @{
-                    value = $null # Should fallback on default value
-                }
-                prefixFolders = @{
-                    value = $null
-                }
-                medialocation = @{
-                    value = $null
-                }
-                conversion = @{
-                    value = $null
-                }
-                headerTimestampEnabled = @{
-                    value = $null
-                }
-                keepspaces = @{
-                    value = $null
-                }
-                keepescape = @{
-                    value = $null
-                }
-            }
             Mock Read-Host {
                 $typeName = [Microsoft.PowerShell.ToStringCodeMethods]::Type($config[$key]['default'].GetType())
                 Invoke-Expression ('$fakeUserInputs[$key]["value"] -as ' + "[$typeName]")
             }
+
             $expectedConfig = Get-DefaultConfiguration
             $expectedConfig['notesdestpath']['value'] = 'c:\foo\bar'
 
@@ -1119,6 +1094,22 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
 
             Assert-MockCalled -CommandName Get-Content -Times 1
             Assert-MockCalled -CommandName Set-Content -Times 1
+        }
+
+        It "Does a dry run" {
+            Mock New-Item { 'foo' }
+            Mock Remove-Item { 'foo' }
+            Mock Publish-OneNotePageToDocx { 'foo' }
+            Mock Start-Process { 'foo' }
+            Mock Rename-Item { 'foo' }
+            Mock Get-Content { 'foo' }
+            Mock Set-Content { 'foo' }
+
+            $params['Config']['DryRun']['value'] = 2
+
+            $result = Convert-OneNotePage @params 6>$null
+
+            $result | Should -Be $null
         }
 
     }

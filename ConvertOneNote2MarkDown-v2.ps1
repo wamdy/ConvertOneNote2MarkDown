@@ -30,6 +30,16 @@ Function Get-DefaultConfiguration {
 
     # The default configuration
     $config = [ordered]@{
+        dryRun = @{
+            description = @'
+Whether to do a dry run
+1: Convert
+2: Convert (dry run)
+'@
+            default = 1
+            value = 1
+            validateRange = 1,2
+        }
         notesdestpath = @{
             description = @'
 Specify folder path that will contain your resulting Notes structure - Default: c:\temp\notes
@@ -801,7 +811,9 @@ Function Convert-OneNotePage {
             foreach ($d in $pageCfg['directoriesToCreate']) {
                 try {
                     "Directory: $( $d )" | Write-Verbose
-                    $item = New-Item -Path $d -ItemType Directory -Force -ErrorAction Stop
+                    if ($config['dryRun']['value'] -eq 1) {
+                        $item = New-Item -Path $d -ItemType Directory -Force -ErrorAction Stop
+                    }
                 }catch {
                     throw "Failed to create directory '$d': $( $_.Exception.Message )"
                 }
@@ -811,7 +823,9 @@ Function Convert-OneNotePage {
                 # Remove any existing docx files, don't proceed if it fails
                 try {
                     "Removing existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
-                    Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                    if ($config['dryRun']['value'] -eq 1) {
+                        Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                    }
                 }catch {
                     throw "Error removing intermediary docx file $( $pageCfg['fullexportpath'] ): $( $_.Exception.Message )"
                 }
@@ -821,7 +835,9 @@ Function Convert-OneNotePage {
             if (! (Test-Path $pageCfg['fullexportpath']) ) {
                 try {
                     "Publishing new docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
-                    Publish-OneNotePageToDocx -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['fullexportpath']
+                    if ($config['dryRun']['value'] -eq 1) {
+                        Publish-OneNotePageToDocx -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['fullexportpath']
+                    }
                 }catch {
                     throw "Error while publishing page to docx file $( $pageCfg['object'].name ): $( $_.Exception.Message )"
                 }
@@ -833,9 +849,11 @@ Function Convert-OneNotePage {
             # Convert .docx to .md, don't proceed if it fails
             try {
                 "Converting docx file to markdown file: $( $pageCfg['fullfilepathwithoutextension'] ).md" | Write-Verbose
-                $process = Start-Process -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList @( '-f', 'docx', '-t', "$( $pageCfg['converter'] )-simple_tables-multiline_tables-grid_tables+pipe_tables", '-i', $pageCfg['fullexportpath'], '-o', "$( $pageCfg['fullfilepathwithoutextension'] ).md", '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" ) # extracts into ./media of the supplied folder
-                if ($process.ExitCode) {
-                    throw 'pandoc failed to convert'
+                if ($config['dryRun']['value'] -eq 1) {
+                    $process = Start-Process -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList @( '-f', 'docx', '-t', "$( $pageCfg['converter'] )-simple_tables-multiline_tables-grid_tables+pipe_tables", '-i', $pageCfg['fullexportpath'], '-o', "$( $pageCfg['fullfilepathwithoutextension'] ).md", '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" ) # extracts into ./media of the supplied folder
+                    if ($process.ExitCode) {
+                        throw 'pandoc failed to convert'
+                    }
                 }
             }catch {
                 throw "Error while converting docx file $( $pageCfg['fullexportpath'] ) to markdown file $( $pageCfg['fullfilepathwithoutextension'] ).md: $( $_.Exception.Message )"
@@ -845,7 +863,9 @@ Function Convert-OneNotePage {
             if ($config['keepdocx']['value'] -eq 1) {
                 try {
                     "Removing existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
-                    Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                    if ($config['dryRun']['value'] -eq 1) {
+                        Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                    }
                 }catch {
                     Write-Error "Error removing intermediary docx file $( $pageCfg['fullexportpath'] ): $( $_.Exception.Message )"
                 }
@@ -855,7 +875,9 @@ Function Convert-OneNotePage {
             foreach ($attachmentCfg in $pageCfg['insertedAttachments']) {
                 try {
                     "Saving inserted attachment: $( $attachmentCfg['destination'] )" | Write-Verbose
-                    Copy-Item -Path $attachmentCfg['source'] -Destination $attachmentCfg['destination'] -Force -ErrorAction Stop
+                    if ($config['dryRun']['value'] -eq 1) {
+                        Copy-Item -Path $attachmentCfg['source'] -Destination $attachmentCfg['destination'] -Force -ErrorAction Stop
+                    }
                 }catch {
                     Write-Error "Error while saving attachment from $( $attachmentCfg['source'] ) to $( $attachmentCfg['destination'] ): $( $_.Exception.Message )"
                 }
@@ -869,17 +891,21 @@ Function Convert-OneNotePage {
                 $newimageName = "$($( $pageCfg['mdFileName'] ).SubString(0,[math]::min(30,$( $pageCfg['mdFileName'] ).length)))-$($image.BaseName)-$($timeStamp)$($image.Extension)"
                 # Rename Image
                 try {
-                    "Renaming image: $( $image.FullName ) to $( $item.FullName )" | Write-Verbose
-                    $item = Rename-Item -Path "$( $image.FullName )" -NewName $newimageName -ErrorAction Stop -PassThru
+                    "Renaming image: $( $image.FullName ) to $( $newimageName )" | Write-Verbose
+                    if ($config['dryRun']['value'] -eq 1) {
+                        $item = Rename-Item -Path "$( $image.FullName )" -NewName $newimageName -ErrorAction Stop -PassThru
+                    }
                 }catch {
                     Write-Error "Error while renaming image $( $image.FullName ) to $( $item.FullName ): $( $_.Exception.Message )"
                 }
                 # Change MD file Image filename References
                 try {
                     "Mutation of markdown: Rename image references to unique name" | Write-Verbose
-                    $content = Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Raw -ErrorAction Stop # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
-                    $content = $content.Replace("$($image.Name)", "$($newimageName)")
-                    Set-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
+                    if ($config['dryRun']['value'] -eq 1) {
+                        $content = Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Raw -ErrorAction Stop # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
+                        $content = $content.Replace("$($image.Name)", "$($newimageName)")
+                        Set-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
+                    }
                 }catch {
                     Write-Error "Error while renaming image file name references to '$( $newimageName ): $( $_.Exception.Message )"
                 }
@@ -887,30 +913,36 @@ Function Convert-OneNotePage {
 
             # Mutate markdown content
             try {
-                # Get markdown content
-                $content = @( Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -ErrorAction Stop )  # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
-                $content = @(
-                    if ($content.Count -gt 6) {
-                        # Discard first 6 lines which contain a header, created date, and time. We are going to add our own header
-                        $content[6..($content.Count - 1)]
-                    }else {
-                        # Empty page
-                        ''
-                    }
-                ) -join "`r`n"
+                if ($config['dryRun']['value'] -eq 1) {
+                    # Get markdown content
+                    $content = @( Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -ErrorAction Stop )  # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
+                    $content = @(
+                        if ($content.Count -gt 6) {
+                            # Discard first 6 lines which contain a header, created date, and time. We are going to add our own header
+                            $content[6..($content.Count - 1)]
+                        }else {
+                            # Empty page
+                            ''
+                        }
+                    ) -join "`r`n"
+                }
 
                 # Mutate
                 foreach ($m in $pageCfg['mutations']) {
                     foreach ($r in $m['replacements']) {
                         try {
                             "Mutation of markdown: $( $m['description'] )" | Write-Verbose
-                            $content = $content -replace $r['searchRegex'], $r['replacement']
+                            if ($config['dryRun']['value'] -eq 1) {
+                                $content = $content -replace $r['searchRegex'], $r['replacement']
+                            }
                         }catch {
                             Write-Error "Failed to mutating markdown content with mutation '$( $m['description'] )': $( $_.Exception.Message )"
                         }
                     }
                 }
-                Set-Content "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
+                if ($config['dryRun']['value'] -eq 1) {
+                    Set-Content "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
+                }
             }catch {
                 Write-Error "Error while mutating markdown content: $( $_.Exception.Message )"
             }
@@ -1038,7 +1070,6 @@ Function Convert-OneNote2MarkDown {
             "Exporting Page Conversion Configuration as JSON file: $ConversionConfigurationExportPath" | Write-Host -ForegroundColor Cyan
             $pageConversionConfigs | ConvertTo-Json -Depth 100 | Out-File $ConversionConfigurationExportPath -Encoding utf8 -Force
         }
-
     }catch {
         if ($ErrorActionPreference -eq 'Stop') {
             throw

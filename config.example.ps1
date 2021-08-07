@@ -6,6 +6,11 @@
 #   2) Configure the options below to your liking
 #   3) Run the main script: ./ConvertOneNote2MarkDown-v2.ps1. Sit back while the script starts converting immediately.
 
+# Whether to do a dry run
+# 1: Convert
+# 2: Convert (dry run)
+$dryRun = 1
+
 # Specify folder path that will contain your resulting Notes structure - Default: c:\temp\notes
 $notesdestpath = 'c:\temp\notes'
 
