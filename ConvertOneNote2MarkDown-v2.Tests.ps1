@@ -636,6 +636,34 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
         }
 
         It "Should honor config prefixFolders" {
+            $params['Config']['prefixFolders']['value'] = 1
+
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
+            $result.Count | Should -Be 18
+
+            for ($i = 0; $i -lt $result.Count; $i = $i + 3) { # Test in threes
+                $pageCfg1 = $result[$i] # First level page
+                $pageCfg2 = $result[$i + 1] # Second level page preceded by a first level page
+                $pageCfg3 = $result[$i + 2] # Third level page preceded by a second level page
+
+                # Test the first level page
+                Split-Path $pageCfg1['fullfilepathwithoutextension'] -Leaf | Should -Be  $pageCfg1['nameCompat']
+                Split-Path $pageCfg1['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg1['fullexportdirpath']
+                $pageCfg1['levelsPrefix']| Should -Be "$( '../' * ($pageCfg1['levelsFromRoot'] + $pageCfg1['pageLevel'] - 1) )"
+
+                # Test the second level page preceded by a first level page
+                Split-Path $pageCfg2['fullfilepathwithoutextension'] -Leaf | Should -Be  $pageCfg2['nameCompat']
+                Split-Path $pageCfg2['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg2['fullexportdirpath']
+                $pageCfg2['levelsPrefix']| Should -Be "$( '../' * ($pageCfg2['levelsFromRoot'] + $pageCfg2['pageLevel'] - 1) )"
+
+                # Test the third level page preceded by a second level page
+                Split-Path $pageCfg3['fullfilepathwithoutextension'] -Leaf | Should -Be  $pageCfg3['nameCompat']
+                Split-Path $pageCfg3['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg3['fullexportdirpath']
+                $pageCfg3['levelsPrefix']| Should -Be "$( '../' * ($pageCfg3['levelsFromRoot'] + $pageCfg3['pageLevel'] - 1) )"
+            }
+
             $params['Config']['prefixFolders']['value'] = 2
 
             $result = @( New-SectionGroupConversionConfig @params 6>$null )
@@ -643,24 +671,29 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
             $result.Count | Should -Be 18
 
-            $pageCfg1 = $result[0] # First level page
-            $pageCfg2 = $result[1] # Second level page preceded by a first level page
-            $pageCfg3 = $result[2] # Third level page preceded by a second level page
+            for ($i = 0; $i -lt $result.Count; $i = $i + 3) { # Test in threes
+                $pageCfg1 = $result[$i] # First level page
+                $pageCfg2 = $result[$i + 1] # Second level page preceded by a first level page
+                $pageCfg3 = $result[$i + 2] # Third level page preceded by a second level page
 
-            # Test the first level page
-            $pageCfg1['filePathRelUnderscore'] | Should -Be "$( $pageCfg1['nameCompat'] )"
-            Split-Path $pageCfg1['fullfilepathwithoutextension'] -Leaf | Should -Be  "$( $pageCfg1['nameCompat'] )"
-            Split-Path $pageCfg3['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg1['fullexportdirpath']
+                # Test the first level page
+                $pageCfg1['filePathRelUnderscore'] | Should -Be "$( $pageCfg1['nameCompat'] )"
+                Split-Path $pageCfg1['fullfilepathwithoutextension'] -Leaf | Should -Be  "$( $pageCfg1['nameCompat'] )"
+                Split-Path $pageCfg1['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg1['fullexportdirpath']
+                $pageCfg1['levelsPrefix']| Should -Be "$( '../' * ($pageCfg1['levelsFromRoot'] + 1 - 1) )"
 
-            # Test the second level page preceded by a first level page
-            $pageCfg2['filePathRelUnderscore'] | Should -Be "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )"
-            Split-Path $pageCfg2['fullfilepathwithoutextension'] -Leaf | Should -Be  "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )"
-            Split-Path $pageCfg3['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg2['fullexportdirpath']
+                # Test the second level page preceded by a first level page
+                $pageCfg2['filePathRelUnderscore'] | Should -Be "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )"
+                Split-Path $pageCfg2['fullfilepathwithoutextension'] -Leaf | Should -Be  "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )"
+                Split-Path $pageCfg2['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg2['fullexportdirpath']
+                $pageCfg2['levelsPrefix']| Should -Be "$( '../' * ($pageCfg2['levelsFromRoot'] + 1 - 1) )"
 
-            # Test the third level page preceded by a second level page
-            $pageCfg3['filePathRelUnderscore'] | Should -Be "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )_$( $pageCfg3['nameCompat'] )"
-            Split-Path $pageCfg3['fullfilepathwithoutextension'] -Leaf | Should -Be  "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )_$( $pageCfg3['nameCompat'] )"
-            Split-Path $pageCfg3['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg3['fullexportdirpath']
+                # Test the third level page preceded by a second level page
+                $pageCfg3['filePathRelUnderscore'] | Should -Be "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )_$( $pageCfg3['nameCompat'] )"
+                Split-Path $pageCfg3['fullfilepathwithoutextension'] -Leaf | Should -Be  "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )_$( $pageCfg3['nameCompat'] )"
+                Split-Path $pageCfg3['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg3['fullexportdirpath']
+                $pageCfg3['levelsPrefix']| Should -Be "$( '../' * ($pageCfg3['levelsFromRoot'] + 1 - 1) )"
+            }
         }
 
         It "Should honor config medialocation" {
