@@ -607,7 +607,11 @@ Function New-SectionGroupConversionConfig {
                 $pageCfg['levelsPrefix'] = if ($config['medialocation']['value'] -eq 2) {
                     ''
                 }else {
-                    "$( '../' * ($pageCfg['levelsFromRoot'] + $pageCfg['pageLevel'] - 1) )"
+                    if ($config['prefixFolders']['value'] -eq 2) {
+                        "$( '../' * ($pageCfg['levelsFromRoot'] + 1 - 1) )"
+                    }else {
+                        "$( '../' * ($pageCfg['levelsFromRoot'] + $pageCfg['pageLevel'] - 1) )"
+                    }
                 }
                 $pageCfg['mediaParentPath'] = if ($config['medialocation']['value'] -eq 2) {
                     $pageCfg['fullexportdirpath']
