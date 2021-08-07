@@ -49,7 +49,6 @@ $conversion = 1
 $headerTimestampEnabled = 1
 $keepspaces = 1
 $keepescape = 1
-$keepPathSpaces = 1
 '@
             }
             $expectedConfig = Get-DefaultConfiguration
@@ -92,9 +91,6 @@ $keepPathSpaces = 1
                     value = $null
                 }
                 keepescape = @{
-                    value = $null
-                }
-                keepPathSpaces = @{
                     value = $null
                 }
             }
@@ -861,29 +857,6 @@ foo\bar
                 $fakeMarkdownContent = $fakeMarkdownContent -split "`n"
                 $fakeMarkdownContent.Count | Should -Be 7
                 $fakeMarkdownContent[6] | Should -Match '^foo\\bar\s*$'
-            }
-        }
-
-        It "Should honor config keepPathSpaces" {
-            $params['Config']['keepPathSpaces']['value'] = 1
-
-            $result1 = @( New-SectionGroupConversionConfig @params 6>$null )
-
-            $params['Config']['keepPathSpaces']['value'] = 2
-
-            $result2 = @( New-SectionGroupConversionConfig @params 6>$null )
-
-            # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
-            $result1.Count | Should -Be 18
-            $result2.Count | Should -Be 18
-
-            # Between keepPathSpaces 1 and 2, any difference should be space-related
-            for ($i = 0; $i -lt $result1.Count; $i++) {
-                $result1[$i]['mdFileName'] | Should -Not -Be $result2[$i]['mdFileName']
-                $result1[$i]['fullfilepathwithoutextension'] | Should -Not -Be $result2[$i]['fullfilepathwithoutextension']
-
-                $result2[$i]['mdFileName'].Replace(' ', '-') | Should -Be $result1[$i]['mdFileName']
-                $result2[$i]['fullfilepathwithoutextension'].Replace(' ', '-') | Should -Be $result1[$i]['fullfilepathwithoutextension']
             }
         }
 
