@@ -597,7 +597,7 @@ Function New-SectionGroupConversionConfig {
                     # in case multiple pages with the same name exist in a section, postfix the filename
                     $recurrence = 0
                     foreach ($p in $sectionCfg['pages']) {
-                        if ($p['filePathRel'] -eq $filePathRel) {
+                        if ($p['pagePrefix'] -eq $pageCfg['pagePrefix'] -and $p['pathFromRoot'] -eq $pageCfg['pathFromRoot']) {
                             $recurrence++
                         }
                     }
@@ -953,7 +953,7 @@ Function Convert-OneNotePage {
 
             "Markdown file ready: $( $pageCfg['fullfilepathwithoutextension'] ).md" | Write-Host -ForegroundColor Green
         }catch {
-            Write-Error "Failed to convert page of name: $( $pageCfg['object'].name ), node: $( $pageCfg['filePathRel'] ). Reason: $( $_.Exception.Message )"
+            Write-Error "Failed to convert page: $( $pageCfg['pathFromRoot'] ). Reason: $( $_.Exception.Message )"
         }
     }
 }

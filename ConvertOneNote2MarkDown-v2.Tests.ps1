@@ -371,7 +371,10 @@ Describe "New-OneNoteConnection" -Tag 'Unit' {
 
 }
 function Get-FakeOneNoteHierarchy {
-    # Sample outerXML of a hierarchy object. Here we have two identical notebooks: 'test' and 'test2' with a simple nested structure
+    # Sample outerXML of a hierarchy object. Here we have two identical notebooks: 'test' and 'test2' with a simple nested structure, each with 9 pages, in groups of 3:
+    # 1) The 1st, 2nd, and 3rd pages are uniqely named, in the notebook base
+    # 3) The 4th, 5th 6th pages are a copy of 1), but nested 1 level
+    # 3) The 7th, 8th 9th pages are a copy of 1), but nested 2 levels
     $hierarchy = @'
 <?xml version="1.0"?>
 <one:Notebooks xmlns:one="http://schemas.microsoft.com/office/onenote/2013/onenote">
@@ -431,6 +434,72 @@ function Get-FakeOneNoteHierarchy {
 '@ -as [xml]
     $hierarchy
 }
+
+function Get-FakeOneNoteHierarchyWithDuplicatePageNames {
+    # Sample outerXML of a hierarchy object. Here we have two identical notebooks: 'test' and 'test2' with a simple nested structure, each with 9 pages, in groups of 3:
+    # 1) The 1st, 2nd, and 3rd pages are identically named, in the notebook base
+    # 3) The 4th, 5th 6th pages are a copy of 1), but nested 1 level
+    # 3) The 7th, 8th 9th pages are a copy of 1), but nested 2 levels
+    $hierarchy = @'
+<?xml version="1.0"?>
+<one:Notebooks xmlns:one="http://schemas.microsoft.com/office/onenote/2013/onenote">
+    <one:Notebook name="test" nickname="test" ID="{38E47DAB-211E-4EC1-85F1-129656A9D2CE}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/" lastModifiedTime="2021-08-06T16:27:58.000Z" color="#ADE792">
+        <one:Section name="s0" ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/s0.one" lastModifiedTime="2021-08-06T16:08:25.000Z" color="#8AA8E4">
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19461971475288592555920101886406896686096991}" name="p0.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T16:08:25.000Z" pageLevel="1" />
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19461971475288592555920101886406896686096992}" name="p0.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T16:08:25.000Z" pageLevel="1" />
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19461971475288592555920101886406896686096993}" name="p0.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T16:08:25.000Z" pageLevel="1" />
+        </one:Section>
+        <one:SectionGroup name="OneNote_RecycleBin" ID="{1298D961-43A6-46E4-81FC-B4FD9F87755C}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/OneNote_RecycleBin/" lastModifiedTime="2021-08-06T16:27:58.000Z" isRecycleBin="true">
+            <one:Section name="Deleted Pages" ID="{4E51704F-4F96-4D17-A453-EE11A4BEEBD8}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/OneNote_RecycleBin/OneNote_DeletedPages.one" lastModifiedTime="2021-08-06T15:57:18.000Z" color="#E1E1E1" isInRecycleBin="true" isDeletedPages="true">
+                <one:Page ID="{4E51704F-4F96-4D17-A453-EE11A4BEEBD8}{1}{E19471045090380451344020177961181143029428871}" name="Untitled page" dateTime="2021-08-06T00:44:05.000Z" lastModifiedTime="2021-08-06T00:44:05.000Z" pageLevel="1" isInRecycleBin="true" />
+            </one:Section>
+        </one:SectionGroup>
+        <one:SectionGroup name="g0" ID="{9570CCF6-17C2-4DCE-83A0-F58AE8914E29}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/g9/" lastModifiedTime="2021-08-06T15:49:20.000Z">
+            <one:Section name="s1" ID="{BE566C4F-73DC-43BD-AE7A-1954F8B22C2A}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/g9/s1.one" lastModifiedTime="2021-08-06T15:49:13.000Z" color="#F5F96F">
+                <one:Page ID="{BE566C4F-73DC-43BD-AE7A-1954F8B22C2A}{1}{E195456188209333946682201130923317421855940917}" name="p1.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:49:13.000Z" pageLevel="1" />
+                <one:Page ID="{BE566C4F-73DC-43BD-AE7A-1954F8B22C2A}{1}{E195456188209333946682201130923317421855940918}" name="p1.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:49:13.000Z" pageLevel="1" />
+                <one:Page ID="{BE566C4F-73DC-43BD-AE7A-1954F8B22C2A}{1}{E195456188209333946682201130923317421855940919}" name="p1.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:49:13.000Z" pageLevel="1" />
+            </one:Section>
+            <one:SectionGroup name="g1" ID="{9FD73490-F779-4556-BEBF-2185A1938883}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/g9/g1/" lastModifiedTime="2021-08-06T15:49:20.000Z">
+                <one:Section name="s2" ID="{0ED877BC-2887-4FF7-B5D4-394608754507}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/g9/g1/s2.one" lastModifiedTime="2021-08-06T15:49:20.000Z" color="#ADE792">
+                    <one:Page ID="{0ED877BC-2887-4FF7-B5D4-394608754507}{1}{E194664865830060382992201186404186651426498715}" name="p2.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:45:35.000Z" pageLevel="1" />
+                    <one:Page ID="{0ED877BC-2887-4FF7-B5D4-394608754507}{1}{E194664865830060382992201186404186651426498716}" name="p2.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:45:35.000Z" pageLevel="1" />
+                    <one:Page ID="{0ED877BC-2887-4FF7-B5D4-394608754507}{1}{E194664865830060382992201186404186651426498717}" name="p2.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:45:35.000Z" pageLevel="1" />
+                </one:Section>
+            </one:SectionGroup>
+        </one:SectionGroup>
+    </one:Notebook>
+    <one:Notebook name="test2" nickname="test2" ID="{262450BF-461F-4951-92D3-80C3FC76D27B}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test2/" lastModifiedTime="2021-08-06T16:28:08.000Z" color="#91BAAE" isCurrentlyViewed="true">
+        <one:Section name="s0" ID="{F8F6B54D-769A-43DF-9FD0-ED9F51054880}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test2/s0.one" lastModifiedTime="2021-08-06T16:09:11.000Z" color="#8AA8E4">
+            <one:Page ID="{F8F6B54D-769A-43DF-9FD0-ED9F51054880}{1}{E19555114943310877601019666294307688380101014}" name="p0.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T16:09:11.000Z" pageLevel="1" />
+            <one:Page ID="{F8F6B54D-769A-43DF-9FD0-ED9F51054880}{1}{E19555114943310877601019666294307688380101015}" name="p0.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T16:09:11.000Z" pageLevel="1" />
+            <one:Page ID="{F8F6B54D-769A-43DF-9FD0-ED9F51054880}{1}{E19555114943310877601019666294307688380101016}" name="p0.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T16:09:11.000Z" pageLevel="1" />
+        </one:Section>
+        <one:SectionGroup name="OneNote_RecycleBin" ID="{1908052E-BCA5-491C-AC6D-6A0D0914B94A}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test2/OneNote_RecycleBin/" lastModifiedTime="2021-08-06T16:28:08.000Z" isRecycleBin="true" isCurrentlyViewed="true">
+            <one:Section name="Deleted Pages" ID="{E136ED4A-ED9F-4B1B-A562-183C91FF483A}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test2/OneNote_RecycleBin/OneNote_DeletedPages.one" lastModifiedTime="2021-08-06T15:57:46.000Z" color="#E1E1E1" isCurrentlyViewed="true" isInRecycleBin="true" isDeletedPages="true">
+                <one:Page ID="{E136ED4A-ED9F-4B1B-A562-183C91FF483A}{1}{E19521355828597401344720101901508363770787001}" name="Untitled page" dateTime="2021-08-06T15:57:35.000Z" lastModifiedTime="2021-08-06T15:57:35.000Z" pageLevel="1" isInRecycleBin="true" isCurrentlyViewed="true" />
+            </one:Section>
+        </one:SectionGroup>
+        <one:SectionGroup name="g0" ID="{12BCC0AF-9077-4795-89B3-92731DA42BF1}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test2/g0/" lastModifiedTime="2021-08-06T15:45:38.000Z">
+            <one:Section name="s1" ID="{66C286AD-A732-4921-BFC3-DB419E018FC5}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test2/g0/s1.one" lastModifiedTime="2021-08-06T15:44:31.000Z" color="#F5F96F">
+                <one:Page ID="{66C286AD-A732-4921-BFC3-DB419E018FC5}{1}{E19522158766404420541920144636792947261567311}" name="p1.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:43:18.000Z" pageLevel="1" />
+                <one:Page ID="{66C286AD-A732-4921-BFC3-DB419E018FC5}{1}{E19522158766404420541920144636792947261567312}" name="p1.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:43:18.000Z" pageLevel="1" />
+                <one:Page ID="{66C286AD-A732-4921-BFC3-DB419E018FC5}{1}{E19522158766404420541920144636792947261567313}" name="p1.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:43:18.000Z" pageLevel="1" />
+            </one:Section>
+            <one:SectionGroup name="g1" ID="{70DCA046-102D-43B3-A39B-EA8A6B7D7CAF}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test2/g0/g1/" lastModifiedTime="2021-08-06T15:45:38.000Z">
+                <one:Section name="s2" ID="{659C0A68-EEC9-454E-AEB6-34AFE4D8C395}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test2/g0/g1/s2.one" lastModifiedTime="2021-08-06T15:45:38.000Z" color="#ADE792">
+                    <one:Page ID="{659C0A68-EEC9-454E-AEB6-34AFE4D8C395}{1}{E1950041523555344809591971866755563186297671}" name="p2.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:45:35.000Z" pageLevel="1" />
+                    <one:Page ID="{659C0A68-EEC9-454E-AEB6-34AFE4D8C395}{1}{E1950041523555344809591971866755563186297672}" name="p2.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:45:35.000Z" pageLevel="1" />
+                    <one:Page ID="{659C0A68-EEC9-454E-AEB6-34AFE4D8C395}{1}{E1950041523555344809591971866755563186297673}" name="p2.0 test" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T15:45:35.000Z" pageLevel="1" />
+                </one:Section>
+            </one:SectionGroup>
+        </one:SectionGroup>
+    </one:Notebook>
+</one:Notebooks>
+'@ -as [xml]
+    $hierarchy
+}
+
 function Get-FakeOneNotePageContent {
     # Sample outerXML of a page object
     $page = @'
@@ -575,6 +644,25 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
 
             # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
             $result.Count | Should -Be 18
+        }
+
+        It "Should append a unique postfix to identically named pages of a Section" {
+            $fakeHierarchy = Get-FakeOneNoteHierarchyWithDuplicatePageNames  # Duplicate page names within sections
+            $params['SectionGroups'] = $fakeHierarchy.Notebooks.Notebook
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
+            $result.Count | Should -Be 18
+
+            # The 4th, 5th, and 6th pages are identically named in the fake hierarchy
+            for ($i = 0; $i -lt $result.Count; $i = $i + 3) { # Test in threes
+                $pageCfg1 = $result[$i]
+                $pageCfg2 = $result[$i + 1]
+                $pageCfg3 = $result[$i + 2]
+
+                $pageCfg2['filePathRel'] | Should -Be "$( $pageCfg1['filePathRel'] )-1"
+                $pageCfg3['filePathRel'] | Should -Be "$( $pageCfg1['filePathRel'] )-2"
+            }
         }
 
         It "Should honor config notesdestpath" {
