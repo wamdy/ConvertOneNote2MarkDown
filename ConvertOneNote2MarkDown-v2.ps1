@@ -307,11 +307,10 @@ Function Print-Configuration {
 Function Remove-InvalidFileNameChars {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true,
-            Position = 0,
-            ValueFromPipeline = $true,
-            ValueFromPipelineByPropertyName = $true)]
-        [string]$Name,
+        [Parameter(Mandatory = $true,Position = 0,ValueFromPipeline = $true)]
+        [AllowEmptyString()]
+        [string]$Name
+    ,
         [switch]$KeepPathSpaces
     )
 
@@ -333,13 +332,14 @@ Function Remove-InvalidFileNameChars {
 Function Remove-InvalidFileNameCharsInsertedFiles {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true,
-            Position = 0,
-            ValueFromPipeline = $true,
-            ValueFromPipelineByPropertyName = $true)]
-        [string]$Name,
-        [string]$Replacement = "",
-        [string]$SpecialChars = "#$%^*[]'<>!@{};",
+        [Parameter(Mandatory = $true,Position = 0,ValueFromPipeline = $true,ValueFromPipelineByPropertyName = $true)]
+        [AllowEmptyString()]
+        [string]$Name
+    ,
+        [string]$Replacement = ""
+    ,
+        [string]$SpecialChars = "#$%^*[]'<>!@{};"
+    ,
         [switch]$KeepPathSpaces
     )
 
@@ -505,7 +505,7 @@ Function New-SectionGroupConversionConfig {
         $cfg['nameCompat'] = $sectionGroup.name | Remove-InvalidFileNameChars
         $cfg['levelsFromRoot'] = $LevelsFromRoot
         $cfg['uri'] = $sectionGroup.path # E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup
-        $cfg['notesDirectory'] = [io.path]::combine( $NotesDestination.Replace('\', [io.path]::DirectorySeparatorChar), $cfg['nameCompat'] )
+        $cfg['notesDirectory'] = [io.path]::combine( $NotesDestination.TrimEnd('/').TrimEnd('\').Replace('\', [io.path]::DirectorySeparatorChar), $cfg['nameCompat'] )
         $cfg['notesBaseDirectory'] = & {
             # E.g. 'c:\temp\notes\mynotebook\mysectiongroup'
             # E.g. levelsFromRoot: 1
@@ -515,7 +515,8 @@ Function New-SectionGroupConversionConfig {
             # E.g. 0..(5-1-1) -> 'c:\temp\notes\mynotebook'
             $split[0..($totalLevels - $cfg['levelsFromRoot'] - 1)] -join [io.path]::DirectorySeparatorChar
         }
-        $cfg['pathFromRoot'] = $cfg['notesDirectory'].Replace($cfg['notesBaseDirectory'], '')
+        $cfg['pathFromRoot'] = $cfg['notesDirectory'].Replace($cfg['notesBaseDirectory'], '').Trim([io.path]::DirectorySeparatorChar)
+        $cfg['pathFromRootCompat'] = $cfg['pathFromRoot'] | Remove-InvalidFileNameChars
         $cfg['notesDocxDirectory'] = [io.path]::combine( $cfg['notesBaseDirectory'], 'docx' )
         $cfg['directoriesToCreate'] = @()
 
@@ -533,7 +534,8 @@ Function New-SectionGroupConversionConfig {
             $sectionCfg['kind'] = 'Section'
             $sectionCfg['nameCompat'] = $section.name | Remove-InvalidFileNameChars
             $sectionCfg['levelsFromRoot'] = $cfg['levelsFromRoot'] + 1
-            $sectionCfg['pathFromRoot'] = "$( $cfg['pathFromRoot'] )$( [io.path]::DirectorySeparatorChar )$( $sectionCfg['nameCompat'] )"
+            $sectionCfg['pathFromRoot'] = "$( $cfg['pathFromRoot'] )$( [io.path]::DirectorySeparatorChar )$( $sectionCfg['nameCompat'] )".Trim([io.path]::DirectorySeparatorChar)
+            $sectionCfg['pathFromRootCompat'] = $sectionCfg['pathFromRoot'] | Remove-InvalidFileNameChars
             $sectionCfg['uri'] = $section.path # E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup/mysection
             $sectionCfg['lastModifiedTime'] = [Datetime]::ParseExact($section.lastModifiedTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
             $sectionCfg['pages'] = [System.Collections.ArrayList]@()
@@ -555,6 +557,7 @@ Function New-SectionGroupConversionConfig {
                 $pageCfg['nameCompat'] = $page.name | Remove-InvalidFileNameChars
                 $pageCfg['levelsFromRoot'] = $sectionCfg['levelsFromRoot']
                 $pageCfg['pathFromRoot'] = "$( $sectionCfg['pathFromRoot'] )$( [io.path]::DirectorySeparatorChar )$( $pageCfg['nameCompat'] )"
+                $pageCfg['pathFromRootCompat'] = $pageCfg['pathFromRoot'] | Remove-InvalidFileNameChars
                 $pageCfg['uri'] = "$( $sectionCfg['object'].path )/$( $page.name )" # There's no $page.path property, so we generate one. E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup/mysection/mypage
                 $pageCfg['dateTime'] = [Datetime]::ParseExact($page.dateTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
                 $pageCfg['lastModifiedTime'] = [Datetime]::ParseExact($page.lastModifiedTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
@@ -607,13 +610,13 @@ Function New-SectionGroupConversionConfig {
                     $filePathRel
                 }
                 $pageCfg['filePathRelUnderscore'] = $pageCfg['filePathRel'].Replace( [io.path]::DirectorySeparatorChar, '_' )
-                $pageCfg['mdFileName'] = Split-Path $pageCfg['filePathRel'] -Leaf
                 $pageCfg['fullfilepathwithoutextension'] = if ($config['prefixFolders']['value'] -eq 2) {
                     [io.path]::combine( $cfg['notesDirectory'], $sectionCfg['nameCompat'], $pageCfg['filePathRelUnderscore'] )
                 }else {
                     [io.path]::combine( $cfg['notesDirectory'], $sectionCfg['nameCompat'], $pageCfg['filePathRel'] )
                 }
                 $pageCfg['fullexportdirpath'] = Split-Path $pageCfg['fullfilepathwithoutextension'] -Parent
+                $pageCfg['mdFileName'] = Split-Path $pageCfg['fullfilepathwithoutextension'] -Leaf
                 $pageCfg['levelsPrefix'] = if ($config['medialocation']['value'] -eq 2) {
                     ''
                 }else {
@@ -632,7 +635,7 @@ Function New-SectionGroupConversionConfig {
                 $pageCfg['mediaParentPath'] = Split-Path $pageCfg['mediaPath'] -Parent
                 $pageCfg['mediaPathPandoc'] = $pageCfg['mediaPath'].Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
                 $pageCfg['mediaParentPathPandoc'] = (Split-Path $pageCfg['mediaPathPandoc'] -Parent).Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
-                $pageCfg['fullexportpath'] = [io.path]::combine( $cfg['notesDocxDirectory'], "$( $pageCfg['mdFileName'] ).docx" )
+                $pageCfg['fullexportpath'] = [io.path]::combine( $cfg['notesDocxDirectory'], "$( $pageCfg['pathFromRootCompat'] ).docx" )
                 $pageCfg['insertedAttachments'] = @(
                     & {
                         $pagexml = Get-OneNotePageContent -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID

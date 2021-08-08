@@ -204,12 +204,6 @@ Describe "Remove-InvalidFileNameChars" -Tag 'Unit' {
 
     Context 'Parameters' {
 
-        It "Throw exception when filename is empty" {
-            $emptyFileName = ''
-
-            { Remove-InvalidFileNameChars -Name $emptyFileName } | Should -Throw
-        }
-
         It "Accept pipeline input" {
             $fileName = 'foo'
 
@@ -282,12 +276,6 @@ Describe "Remove-InvalidFileNameChars" -Tag 'Unit' {
 Describe "Remove-InvalidFileNameCharsInsertedFiles" -Tag 'Unit' {
 
     Context 'Parameters' {
-
-        It "Throw exception when filename is empty" {
-            $emptyFileName = ''
-
-            { Remove-InvalidFileNameCharsInsertedFiles -Name $emptyFileName } | Should -Throw
-        }
 
         It "Accept pipeline input" {
             $fileName = 'foo'
@@ -644,6 +632,40 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
 
             # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
             $result.Count | Should -Be 18
+        }
+
+        It "Should generate fully unique docx file for each page, even for identically-named pages in a section" {
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
+            $result.Count | Should -Be 18
+
+            for ($i = 0; $i -lt $result.Count; $i++) {
+                $count = 0
+                for ($j = 0; $j -lt $result.Count; $j++) {
+                    if ($result[$i] -eq $result[$j]) {
+                        $count++
+                    }
+                }
+                $count | Should -Be 1
+            }
+
+            $fakeHierarchy = Get-FakeOneNoteHierarchyWithDuplicatePageNames  # Duplicate page names within sections
+            $params['SectionGroups'] = $fakeHierarchy.Notebooks.Notebook
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
+            $result.Count | Should -Be 18
+
+            for ($i = 0; $i -lt $result.Count; $i++) {
+                $count = 0
+                for ($j = 0; $j -lt $result.Count; $j++) {
+                    if ($result[$i] -eq $result[$j]) {
+                        $count++
+                    }
+                }
+                $count | Should -Be 1
+            }
         }
 
         It "Should append a unique postfix to identically named pages of a Section" {
