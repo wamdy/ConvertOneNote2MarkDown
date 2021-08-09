@@ -627,7 +627,7 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             }
         }
 
-        It "Should constructs individual conversion configuration(s) for pages, based on a given Section Group XML object. Ignores pages in recycle bin." {
+        It "Should construct individual conversion configuration(s) for pages, based on a given Section Group XML object. Ignores pages in recycle bin." {
             $result = @( New-SectionGroupConversionConfig @params 6>$null )
 
             # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
@@ -1076,7 +1076,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
                     Extension = '.jpg'
                 }
             }
-            Mock Rename-Item {
+            Mock Move-Item {
                 [pscustomobject]@{
                     BaseName = 'somenewname'
                     Name = 'somenewname.jpg'
@@ -1175,11 +1175,11 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
             Convert-OneNotePage @params 6>$null
 
             Assert-MockCalled -CommandName Get-ChildItem -Times 1
-            Assert-MockCalled -CommandName Rename-Item -Times 1
+            Assert-MockCalled -CommandName Move-Item -Times 1
         }
 
         It "Does not halt conversion if renaming image(s) fails" {
-            Mock Rename-Item { throw }
+            Mock Move-Item { throw }
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
@@ -1213,7 +1213,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
             Mock Remove-Item { 'foo' }
             Mock Publish-OneNotePageToDocx { 'foo' }
             Mock Start-Process { 'foo' }
-            Mock Rename-Item { 'foo' }
+            Mock Move-Item { 'foo' }
             Mock Get-Content { 'foo' }
             Mock Set-Content { 'foo' }
 

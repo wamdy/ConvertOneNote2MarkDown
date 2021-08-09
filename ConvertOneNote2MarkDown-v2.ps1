@@ -891,16 +891,19 @@ Function Convert-OneNotePage {
             }
 
             # Rename images to have unique names - NoteName-Image#-HHmmssff.xyz
-            $timeStamp = (Get-Date -Format HHmmssff).ToString()
-            $timeStamp = $timeStamp.replace(':', '')
             $images = Get-ChildItem -Path "$( $pageCfg['mediaPath'] )" -Include "*.png", "*.gif", "*.jpg", "*.jpeg" -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name.SubString(0, 5) -match "image" }
             foreach ($image in $images) {
-                $newimageName = "$($( $pageCfg['mdFileName'] ).SubString(0,[math]::min(30,$( $pageCfg['mdFileName'] ).length)))-$($image.BaseName)-$($timeStamp)$($image.Extension)"
                 # Rename Image
                 try {
-                    "Renaming image: $( $image.FullName ) to $( $newimageName )" | Write-Verbose
+                    $newimageName = if ($config['medialocation']['value'] -eq 2) {
+                        "$( $pageCfg['filePathRelUnderscore'] )-$($image.BaseName)$($image.Extension)"
+                    }else {
+                        "$( $pageCfg['pathFromRootCompat'] )-$($image.BaseName)$($image.Extension)"
+                    }
+                    $newimagePath = [io.path]::combine( $pageCfg['mediaPath'], $newimageName )
+                    "Renaming image: $( $image.FullName ) to $( $newimagePath )" | Write-Verbose
                     if ($config['dryRun']['value'] -eq 1) {
-                        $item = Rename-Item -Path "$( $image.FullName )" -NewName $newimageName -ErrorAction Stop -PassThru
+                        $item = Move-Item -Path "$( $image.FullName )" -Destination $newimagePath -Force -ErrorAction Stop -PassThru
                     }
                 }catch {
                     Write-Error "Error while renaming image $( $image.FullName ) to $( $item.FullName ): $( $_.Exception.Message )"
