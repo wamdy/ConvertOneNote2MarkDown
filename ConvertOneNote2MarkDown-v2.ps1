@@ -1031,6 +1031,8 @@ Function Convert-OneNote2MarkDown {
     )
 
     try {
+        Set-StrictMode -Version Latest
+
         # Fix encoding problems for languages other than English
         $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
