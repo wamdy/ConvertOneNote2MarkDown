@@ -45,6 +45,7 @@ The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote 
   * Improved headers, with title now as a # heading, standardized DateTime format, and horizontal line to separate from rest of document
 * Allows to choose whether to remove double spaces between bullet points and non-breaking spaces that are created when converting with Pandoc
 * Allows to choose whether to remove `\` escape symbol that are created when converting with Pandoc
+* Allows to choose whether to use Line Feed (LF) or Carriage Return + Line Feed (CRLF) for new lines
 * Allows Detailed logging. Run the script with `-Verbose` to see detailed logs of each page's conversion.
 
 ## Known Issues

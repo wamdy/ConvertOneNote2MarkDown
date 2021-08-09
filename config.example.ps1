@@ -62,3 +62,8 @@ $keepspaces = 1
 # 1: Clear '\' symbol escape character from files - Default
 # 2: Keep '\' symbol escape
 $keepescape = 1
+
+# Whether to use Line Feed (LF) or Carriage Return + Line Feed (CRLF) for new lines - Default
+# 1: LF (unix) - Default
+# 2: CRLF (windows) - Default
+$newlineCharacter = 1
