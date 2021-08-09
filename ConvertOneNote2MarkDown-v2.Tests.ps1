@@ -35,15 +35,16 @@ Describe "Compile-Configuration" -Tag 'Unit' {
 
     Context 'Behavior' {
 
-        It "Compiles configuration from config file: normalize path, trim string" {
+        It "Compiles configuration from config file: cast input as expected type, normalize path, trim string, and fallback on default values on empty input" {
             Mock Test-Path { $true }
             Mock Get-Content {
+                # Fake content of a config.ps1
                 @'
 $dryrun = 1
 $notesdestpath = 'c:\temp\notes\/ ' # Deliberately add a trailing slah(es) and space
 $targetNotebook = '   ' # Deliberately add extra spaces
-$usedocx = 1
-$keepdocx = 1
+$usedocx = '1'
+# $keepdocx = 1 # Deliberately omit a configuration option from
 $prefixFolders = 1
 $medialocation = 1
 $conversion = 1
@@ -108,7 +109,13 @@ Describe "Validate-Configuration" -Tag 'Unit' {
     Context 'Behavior' {
 
         It "Throws on missing config option" {
-            $config = @{}
+            $config = Get-DefaultConfiguration
+            $config['notesdestpath'] = $null
+
+            { $config | Validate-Configuration } | Should -Throw 'Missing configuration option'
+
+            $config = Get-DefaultConfiguration
+            $config['notesdestpath']['value'] = $null
 
             { $config | Validate-Configuration } | Should -Throw 'Missing configuration option'
         }
