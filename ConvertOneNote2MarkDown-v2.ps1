@@ -141,6 +141,16 @@ Whether to clear escape symbols from md files
             value = 1
             validateRange = 1,2
         }
+        newlineCharacter = @{
+            description = @'
+Whether to use Line Feed (LF) or Carriage Return + Line Feed (CRLF) for new lines - Default
+1: LF (unix) - Default
+2: CRLF (windows) - Default
+'@
+            default = 1
+            value = 1
+            validateRange = 1,2
+        }
     }
 
     $config
@@ -657,7 +667,7 @@ Function New-SectionGroupConversionConfig {
                     }
                 )
                 $pageCfg['mutations'] = @(
-                    # Markdown mutations
+                    # Markdown mutations. Each search and replace is done against a string containing the entire markdown content
 
                     foreach ($attachmentCfg in $pageCfg['insertedAttachments']) {
                         @{
@@ -689,7 +699,7 @@ Function New-SectionGroupConversionConfig {
                                     $heading = "# $( $pageCfg['object'].name )"
                                     if ($config['headerTimestampEnabled']['value'] -eq 1) {
                                         $heading += $pageCfg['dateTime'].ToString("`n`nyyyy-MM-dd HH:mm:ss")
-                                        $heading += "`r`n`r`n---`r`n"
+                                        $heading += "`n`n---`n"
                                     }
                                     $heading
                                 }
@@ -705,8 +715,8 @@ Function New-SectionGroupConversionConfig {
                                     replacement = ''
                                 }
                                 @{
-                                    searchRegex = '\r?\n\r?\n- '
-                                    replacement = "`r`n- "
+                                    searchRegex = '\r*\n\r*\n- '
+                                    replacement = "`n- "
                                 }
                             )
                         }
@@ -720,6 +730,29 @@ Function New-SectionGroupConversionConfig {
                                     replacement = ''
                                 }
                             )
+                        }
+                    }
+                    & {
+                        if ($config['newlineCharacter']['value'] -eq 1) {
+                            @{
+                                description = "Use LF for newlines"
+                                replacements = @(
+                                    @{
+                                        searchRegex = '\r*\n'
+                                        replacement = "`n"
+                                    }
+                                )
+                            }
+                        }else {
+                            @{
+                                description = "Use CRLF for newlines"
+                                replacements = @(
+                                    @{
+                                        searchRegex = '`r*\n'
+                                        replacement = "`r`n"
+                                    }
+                                )
+                            }
                         }
                     }
                 )
@@ -934,7 +967,7 @@ Function Convert-OneNotePage {
                             # Empty page
                             ''
                         }
-                    ) -join "`r`n"
+                    ) -join "`n"
                 }
 
                 # Mutate

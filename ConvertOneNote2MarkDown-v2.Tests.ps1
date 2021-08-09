@@ -50,6 +50,7 @@ $conversion = 1
 $headerTimestampEnabled = 1
 $keepspaces = 1
 $keepescape = 1
+$newlineCharacter = 1
 '@
             }
             $expectedConfig = Get-DefaultConfiguration
@@ -974,6 +975,63 @@ foo\bar
                 $fakeMarkdownContent = $fakeMarkdownContent -split "`n"
                 $fakeMarkdownContent.Count | Should -Be 7
                 $fakeMarkdownContent[6] | Should -Match '^foo\\bar\s*$'
+            }
+        }
+
+        It "Should honor config newlineCharacter" {
+            $params['Config']['newlineCharacter']['value'] = 1
+
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
+            $result.Count | Should -Be 18
+
+            foreach ($pageCfg in $result) {
+                $fakeMarkdownContent = @"
+
+foo`r`nbar`r`nbaz
+"@
+
+                # Mutate
+                foreach ($m in $pageCfg['mutations']) {
+                    foreach ($r in $m['replacements']) {
+                        $fakeMarkdownContent = $fakeMarkdownContent -replace $r['searchRegex'], $r['replacement']
+                    }
+                }
+
+                # Should remove CRs. Ignore first 6 lines for page header
+                $fakeMarkdownContent = $fakeMarkdownContent -split "`n"
+                $fakeMarkdownContent.Count | Should -Be 9
+                $fakeMarkdownContent[6] | Should -Match '^foo$'
+                $fakeMarkdownContent[7] | Should -Match '^bar$'
+                $fakeMarkdownContent[8] | Should -Match '^baz$'`
+            }
+
+            $params['Config']['newlineCharacter']['value'] = 2
+
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
+            $result.Count | Should -Be 18
+
+            foreach ($pageCfg in $result) {
+               $fakeMarkdownContent = @"
+
+foo`r`nbar`r`nbaz
+"@
+                # Mutate
+                foreach ($m in $pageCfg['mutations']) {
+                    foreach ($r in $m['replacements']) {
+                        $fakeMarkdownContent = $fakeMarkdownContent -replace $r['searchRegex'], $r['replacement']
+                    }
+                }
+
+                # Should retain CRs. Ignore first 6 lines for page header
+                $fakeMarkdownContent = $fakeMarkdownContent -split "`n"
+                $fakeMarkdownContent.Count | Should -Be 9
+                $fakeMarkdownContent[6] | Should -Match "^foo`r$"
+                $fakeMarkdownContent[7] | Should -Match "^bar`r$"
+                $fakeMarkdownContent[8] | Should -Match "^baz$"
             }
         }
 
