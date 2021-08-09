@@ -7,7 +7,7 @@
 #   3) Run the main script: ./ConvertOneNote2MarkDown-v2.ps1. Sit back while the script starts converting immediately.
 
 # Whether to do a dry run
-# 1: Convert
+# 1: Convert - Default
 # 2: Convert (dry run)
 $dryRun = 1
 
@@ -19,12 +19,12 @@ $notesdestpath = 'c:\temp\notes'
 # 'mynotebook': Convert specific notebook named 'mynotebook'
 $targetNotebook = ''
 
-# Whether to create new word docs or reuse existing ones
+# Whether to create new word .docx or reuse existing ones
 # 1: Always create new .docx files - Default
 # 2: Use existing .docx files (90% faster)
 $usedocx = 1
 
-# Whether to discard word docs after conversion
+# Whether to discard word .docx after conversion
 # 1: Discard intermediate .docx files - Default
 # 2: Keep .docx files
 $keepdocx = 1
