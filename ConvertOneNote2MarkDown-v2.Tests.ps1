@@ -676,7 +676,6 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             # 9 pages from 'test' notebook, 9 pages from 'test2' notebook
             $result.Count | Should -Be 18
 
-            # The 4th, 5th, and 6th pages are identically named in the fake hierarchy
             for ($i = 0; $i -lt $result.Count; $i = $i + 3) { # Test in threes
                 $pageCfg1 = $result[$i]
                 $pageCfg2 = $result[$i + 1]

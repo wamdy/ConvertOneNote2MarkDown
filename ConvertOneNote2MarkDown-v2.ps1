@@ -33,7 +33,7 @@ Function Get-DefaultConfiguration {
         dryRun = @{
             description = @'
 Whether to do a dry run
-1: Convert
+1: Convert - Default
 2: Convert (dry run)
 '@
             default = 1
@@ -59,7 +59,7 @@ Specify a notebook name to convert
         }
         usedocx = @{
             description = @'
-Whether to create new word docs or reuse existing ones
+Whether to create new word .docx or reuse existing ones
 1: Always create new .docx files - Default
 2: Use existing .docx files (90% faster)
 '@
@@ -69,7 +69,7 @@ Whether to create new word docs or reuse existing ones
         }
         keepdocx = @{
             description = @'
-Whether to discard word docs after conversion
+Whether to discard word .docx after conversion
 1: Discard intermediate .docx files - Default
 2: Keep .docx files
 '@
