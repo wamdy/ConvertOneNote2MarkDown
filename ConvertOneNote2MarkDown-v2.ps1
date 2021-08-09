@@ -199,14 +199,25 @@ Function Compile-Configuration {
             $scriptblock = [scriptblock]::Create( (Get-Content $PSScriptRoot/config.ps1 -Raw) )
             . $scriptblock
             foreach ($key in @($config.Keys)) {
-                $config[$key]['value'] = Get-Variable -Name $key -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Value
-                # Trim string
+                # E.g. 'string', 'int'
+                $typeName = [Microsoft.PowerShell.ToStringCodeMethods]::Type($config[$key]['default'].GetType())
+                $config[$key]['value'] = Invoke-Expression -Command "(Get-Variable -Name `$key -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Value) -as [$typeName]"
                 if ($config[$key]['value'] -is [string]) {
+                    # Trim string
                     $config[$key]['value'] = $config[$key]['value'].Trim()
+
+                    # Remove trailing slash(es) for paths
+                    if ($key -match 'path' -and $config[$key]['value'] -match '[/\\]') {
+                        $config[$key]['value'] = $config[$key]['value'].TrimEnd('/').TrimEnd('\')
+                    }
                 }
-                # Remove trailing slash(es) for paths
-                if ($key -match 'path' -and $config[$key]['value'] -match '[/\\]') {
-                    $config[$key]['value'] = $config[$key]['value'].TrimEnd('/').TrimEnd('\')
+                # Fallback on default value if the input is empty string
+                if ($config[$key]['value'] -is [string] -and $config[$key]['value'] -eq '') {
+                    $config[$key]['value'] = $config[$key]['default']
+                }
+                # Fallback on default value if the input is empty integer (0)
+                if ($config[$key]['value'] -is [int] -and $config[$key]['value'] -eq 0) {
+                    $config[$key]['value'] = $config[$key]['default']
                 }
             }
         }
@@ -258,7 +269,7 @@ Function Validate-Configuration {
         # Validate a given configuration against a prototype configuration
         $defaultConfig = Get-DefaultConfiguration
         foreach ($key in $defaultConfig.Keys) {
-            if (! $Config.Contains($key)) {
+            if (! $Config.Contains($key) -or ($null -eq $Config[$key]) -or ($null -eq $Config[$key]['value'])) {
                 throw "Missing configuration option '$key'"
             }
             if ($defaultConfig[$key]['default'].GetType().FullName -ne $Config[$key]['value'].GetType().FullName) {
