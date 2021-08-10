@@ -926,6 +926,30 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             }
         }
 
+        It "Should honor config docxNamingConvention" {
+            $params['Config']['docxNamingConvention']['value'] = 1
+
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 15 pages from 'test' notebook, 15 pages from 'test2' notebook
+            $result.Count | Should -Be 30
+
+            foreach ($pageCfg in $result) {
+                Split-Path $pageCfg['fullexportpath'] -Leaf | Should -Be "$( $pageCfg['id'] )-$( $pageCfg['lastModifiedTimeEpoch'] ).docx"
+            }
+
+            $params['Config']['docxNamingConvention']['value'] = 2
+
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 15 pages from 'test' notebook, 15 pages from 'test2' notebook
+            $result.Count | Should -Be 30
+
+            foreach ($pageCfg in $result) {
+                Split-Path $pageCfg['fullexportpath'] -Leaf | Should -Be "$( $pageCfg['pathFromRootCompat'] ).docx"
+            }
+        }
+
         It "Should honor config medialocation" {
             $params['Config']['medialocation']['value'] = 1
 

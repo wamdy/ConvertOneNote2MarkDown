@@ -29,6 +29,11 @@ $usedocx = 1
 # 2: Keep .docx files
 $keepdocx = 1
 
+# Whether to use name .docx files using page ID with last modified date epoch, or hierarchy
+# 1: Use page ID with last modified date epoch (recommended if you chose to use existing .docx files) - Default
+# 2: Use hierarchy
+$docxNamingConvention = 1
+
 # Whether to use prefix vs subfolders
 # 1: Create folders for subpages (e.g. Page\Subpage.md) - Default
 # 2: Add prefixes for subpages (e.g. Page_Subpage.md)
