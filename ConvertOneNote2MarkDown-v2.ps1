@@ -143,9 +143,9 @@ Whether to clear escape symbols from md files
         }
         newlineCharacter = @{
             description = @'
-Whether to use Line Feed (LF) or Carriage Return + Line Feed (CRLF) for new lines - Default
+Whether to use Line Feed (LF) or Carriage Return + Line Feed (CRLF) for new lines
 1: LF (unix) - Default
-2: CRLF (windows) - Default
+2: CRLF (windows)
 '@
             default = 1
             value = 1
