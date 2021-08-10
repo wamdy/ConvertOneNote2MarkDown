@@ -368,7 +368,7 @@ Describe "New-OneNoteConnection" -Tag 'Unit' {
 }
 
 function Get-FakeOneNoteHierarchyWithEmptySectionGroupsAndSectionsAndPages {
-    # Sample outerXML of a hierarchy object. Here we have two identical notebooks: 'test' and 'test2' with a simple nested structure, each with 9 pages, in groups of 3:
+    # Sample outerXML of a hierarchy object.
     # 1) Section is empty, in the notebook base
     # 2) Section Group is empty, in the notebook base
     $hierarchy = @'
@@ -684,13 +684,12 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
         }
 
         It "Should get its pagePrefix from its parent page (if any)" {
-            $params['Config']['prefixFolders']['value'] = 1
-
             $result = @( New-SectionGroupConversionConfig @params 6>$null )
 
             # 15 pages from 'test' notebook, 15 pages from 'test2' notebook
             $result.Count | Should -Be 30
 
+            $pagePrefixSeparatorChar = [io.path]::DirectorySeparatorChar
             for ($i = 0; $i -lt $result.Count; $i = $i + 5) { # Test in fives
                 $pageCfg1 = $result[$i] # First level page
                 $pageCfg2 = $result[$i + 1] # Second level page preceded by a first level page
@@ -702,13 +701,13 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
                 $pageCfg1['pagePrefix'] | Should -Be ''
 
                 # Test the second level page preceded by a first level page
-                $pageCfg2['pagePrefix'] | Should -Be "$( $pageCfg1['filePathRel'] )$( [io.path]::DirectorySeparatorChar )"
+                $pageCfg2['pagePrefix'] | Should -Be "$( $pageCfg1['filePathRel'] )$pagePrefixSeparatorChar"
 
                 # Test the third level page preceded by a second level page
-                $pageCfg3['pagePrefix'] | Should -Be "$( $pageCfg2['filePathRel'] )$( [io.path]::DirectorySeparatorChar )"
+                $pageCfg3['pagePrefix'] | Should -Be "$( $pageCfg2['filePathRel'] )$pagePrefixSeparatorChar"
 
                 # Test the second level page preceded by a third level page
-                $pageCfg4['pagePrefix'] | Should -Be "$( $pageCfg1['filePathRel'] )$( [io.path]::DirectorySeparatorChar )"
+                $pageCfg4['pagePrefix'] | Should -Be "$( $pageCfg1['filePathRel'] )$pagePrefixSeparatorChar"
 
                 # Test the first level page preceded by a second level page
                 $pageCfg5['pagePrefix'] | Should -Be ''
