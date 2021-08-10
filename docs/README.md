@@ -34,7 +34,7 @@ The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote 
   * Updates media references in the resulting .md files, generating *relative* references to the media files within the markdown document
 * Allows to choose between **discarding or keeping intermediate Word files**. Intermediate Word files are stored in a central notebook folder.
 * Allows to choose between converting from existing docx (90% faster) and creating new ones - useful if just want to test differences in the various processing options without generating new docx each time
-* Allows to **select which markdown format will be used**, defaulting to Pandoc's standard format, which strips any HTML from tables along with other desirable (for me) formatting choices. ee more details on these options here: https://pandoc.org/MANUAL.html#options
+* Allows to **select which markdown format will be used**, defaulting to Pandoc's standard format, which strips any HTML from tables along with other desirable (for me) formatting choices. See more details on these options here: https://pandoc.org/MANUAL.html#options
    * markdown (Pandoc’s Markdown)
    * commonmark (CommonMark Markdown)
    * gfm (GitHub-Flavored Markdown), or the deprecated and less accurate markdown_github; use markdown_github only if you need extensions not supported in gfm.
@@ -42,7 +42,7 @@ The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote 
    * markdown_phpextra (PHP Markdown Extra)
    * markdown_strict (original unextended Markdown)
 * Allows to choose whether to include page timestamp and a separator at top of page
-  * Improved headers, with title now as a # heading, standardized DateTime format, and horizontal line to separate from rest of document
+  * Improved headers, with title now as a # heading, standardized DateTime format for created and modified dates, and horizontal line to separate from rest of document
 * Allows to choose whether to remove double spaces between bullet points and non-breaking spaces that are created when converting with Pandoc
 * Allows to choose whether to remove `\` escape symbol that are created when converting with Pandoc
 * Allows to choose whether to use Line Feed (LF) or Carriage Return + Line Feed (CRLF) for new lines
