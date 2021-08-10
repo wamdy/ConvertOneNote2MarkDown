@@ -722,7 +722,8 @@ Function New-SectionGroupConversionConfig {
                                         replacement = & {
                                             $heading = "# $( $pageCfg['object'].name )"
                                             if ($config['headerTimestampEnabled']['value'] -eq 1) {
-                                                $heading += $pageCfg['dateTime'].ToString("`n`nyyyy-MM-dd HH:mm:ss")
+                                                $heading += "`n`nCreated: $(  $pageCfg['dateTime'].ToString('yyyy-MM-dd HH:mm:ss zz00') )"
+                                                $heading += "`n`nModified: $(  $pageCfg['lastModifiedTime'].ToString('yyyy-MM-dd HH:mm:ss zz00') )"
                                                 $heading += "`n`n---`n"
                                             }
                                             $heading
