@@ -63,7 +63,7 @@ $keepspaces = 1
 # 2: Keep '\' symbol escape
 $keepescape = 1
 
-# Whether to use Line Feed (LF) or Carriage Return + Line Feed (CRLF) for new lines - Default
+# Whether to use Line Feed (LF) or Carriage Return + Line Feed (CRLF) for new lines
 # 1: LF (unix) - Default
-# 2: CRLF (windows) - Default
+# 2: CRLF (windows)
 $newlineCharacter = 1
