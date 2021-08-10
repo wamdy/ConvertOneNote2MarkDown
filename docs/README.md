@@ -22,18 +22,19 @@ Credit for this script goes to the wizard [@SjoerdV](https://github.com/SjoerdV)
 
 Ready to make the step to Markdown and saying farewell to your OneNote, EverNote or whatever proprietary note taking tool you are using? Nothing beats clear text, right? Read on!
 
-The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote Object Model on your workstation to convert all OneNote pages to Word documents and then utilizes PanDoc to convert the Word documents to Markdown (.md) format. It will also:
+The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote Object Model on your workstation to convert all OneNote pages to Word documents and then utilizes PanDoc to convert the Word documents to Markdown (.md) format. It will also:
 
 * Allows to choose to do a dry run or run the actual conversion.
 * Creates a **folder structure** for your Notebooks and Sections
 * Process pages that are in sections at the **Notebook, Section Group and all Nested Section Group levels**
 * Allows to choose between **converting a specific notebook or all notebooks**
-* Allows to **choose between creating subfolders for subpages** (e.g. Page\Subpage.md) or **appending prefixes** (e.g. Page_Subpage.md)
-* Allows to choose between putting all media (images, attachments) in a central '/media' folder for each notebook, or in a separate '/media' folder in each folder of the hierarchy
+* Allows to **choose between creating subfolders for subpages** (e.g. `Page\Subpage.md`) or **appending prefixes** (e.g. `Page_Subpage.md`)
+* Allows to choose between putting all media (images, attachments) in a central `/media` folder for each notebook, or in a separate `/media` folder in each folder of the hierarchy
   * Symbols in media file names removed for link compatibility
-  * Updates media references in the resulting .md files, generating *relative* references to the media files within the markdown document
+  * Updates media references in the resulting `.md` files, generating *relative* references to the media files within the markdown document
 * Allows to choose between **discarding or keeping intermediate Word files**. Intermediate Word files are stored in a central notebook folder.
-* Allows to choose between converting from existing docx (90% faster) and creating new ones - useful if just want to test differences in the various processing options without generating new docx each time
+* Allows to choose between converting from existing `.docx` (90% faster) and creating new ones - useful if just want to test differences in the various processing options without generating new `.docx`each time
+* Allows to choose between naming `.docx` files using page ID and last modified epoch date e.g. `{somelongid}-1234567890.docx` or hierarchy e.g. `<sectiongroup>-<section>-<page>.docx`
 * Allows to **select which markdown format will be used**, defaulting to Pandoc's standard format, which strips any HTML from tables along with other desirable (for me) formatting choices. See more details on these options here: https://pandoc.org/MANUAL.html#options
    * markdown (Pandoc’s Markdown)
    * commonmark (CommonMark Markdown)
@@ -55,7 +56,7 @@ The powershell script 'ConvertOneNote2MarkDown-v2.ps1' will utilize the OneNote 
     * [Download Onetastic here](https://getonetastic.com/download) and, once installed, use New Macro-> File-> Import to install the attached .xml macro file within Onetastic
 1. Password protected sections should be unlocked before continuing, the Object Model does not have access to them if you don't
 1. You should start by 'flattening' all pen/hand written elements in your onennote pages. Because OneNote does not have this function you will have to take screenshots of your pages with pen/hand written notes and paste the resulting image and then remove the scriblings. If you are a heavy 'pen' user this is a very cumbersome. **If you have an automated solution for this, please let me know**
-1. Relative paths can not be used as input for the target folder. Always use an absolute path (ex. 'c:\temp\notes').
+1. Relative paths can not be used as input for the target folder. Always use an absolute path (ex. `c:\temp\notes`).
 1. While running the conversion OneNote will be unusable and it is recommended to 'walk away' and have some coffee as the Object Model might be interrupted if you do anything else.
 1. Linked file object in .md files are clickable in VSCode, but do not open in their associated program, you will have to open the files directly from the file system.
 1. Anything I did not catch... please submit an issue.

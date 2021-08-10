@@ -77,6 +77,16 @@ Whether to discard word .docx after conversion
             value = 1
             validateRange = 1,2
         }
+        docxNamingConvention = @{
+            description = @'
+Whether to use name .docx files using page ID with last modified date epoch, or hierarchy
+1: Use page ID with last modified date epoch (recommended if you chose to use existing .docx files) - Default
+2: Use hierarchy
+'@
+            default = 1
+            value = 1
+            validateRange = 1,2
+        }
         prefixFolders = @{
             description = @'
 Whether to use prefix vs subfolders
@@ -541,6 +551,7 @@ Function New-SectionGroupConversionConfig {
         $cfg = [ordered]@{}
         $cfg['object'] = $sectionGroup # Keep a reference to the SectionGroup object
         $cfg['kind'] = 'SectionGroup'
+        $cfg['id'] = $sectionGroup.ID # E.g. {9570CCF6-17C2-4DCE-83A0-F58AE8914E29}{1}{B0}
         $cfg['nameCompat'] = $sectionGroup.name | Remove-InvalidFileNameChars
         $cfg['levelsFromRoot'] = $LevelsFromRoot
         $cfg['uri'] = $sectionGroup.path # E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup
@@ -573,16 +584,18 @@ Function New-SectionGroupConversionConfig {
                 $sectionCfg = [ordered]@{}
                 $sectionCfg['notesBaseDirectory'] = $cfg['notesBaseDirectory']
                 $sectionCfg['notesDirectory'] = $cfg['notesDirectory']
-                $sectionCfg['sectionGroupUri'] = $cfg['uri'] # Keep a reference to mt Section Group Configuration object's uri
+                $sectionCfg['sectionGroupUri'] = $cfg['uri'] # Keep a reference to my Section Group Configuration object's uri
                 $sectionCfg['sectionGroupName'] = $cfg['object'].name
                 $sectionCfg['object'] = $section # Keep a reference to the Section object
                 $sectionCfg['kind'] = 'Section'
+                $sectionCfg['id'] = $section.ID # E.g {BE566C4F-73DC-43BD-AE7A-1954F8B22C2A}{1}{B0}
                 $sectionCfg['nameCompat'] = $section.name | Remove-InvalidFileNameChars
                 $sectionCfg['levelsFromRoot'] = $cfg['levelsFromRoot'] + 1
                 $sectionCfg['pathFromRoot'] = "$( $cfg['pathFromRoot'] )$( [io.path]::DirectorySeparatorChar )$( $sectionCfg['nameCompat'] )".Trim([io.path]::DirectorySeparatorChar)
                 $sectionCfg['pathFromRootCompat'] = $sectionCfg['pathFromRoot'] | Remove-InvalidFileNameChars
                 $sectionCfg['uri'] = $section.path # E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup/mysection
                 $sectionCfg['lastModifiedTime'] = [Datetime]::ParseExact($section.lastModifiedTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
+                $sectionCfg['lastModifiedTimeEpoch'] = Get-Date $sectionCfg['lastModifiedTime'] -UFormat '%s' # Epoch
                 $sectionCfg['pages'] = [System.Collections.ArrayList]@()
 
                 # Build Section's pages
@@ -600,6 +613,7 @@ Function New-SectionGroupConversionConfig {
                         $pageCfg['sectionName'] = $sectionCfg['object'].name
                         $pageCfg['object'] = $page # Keep a reference to my Page object
                         $pageCfg['kind'] = 'Page'
+                        $pageCfg['id'] = $page.ID # E.g. {3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19461971475288592555920101886406896686096991}
                         $pageCfg['nameCompat'] = $page.name | Remove-InvalidFileNameChars
                         $pageCfg['levelsFromRoot'] = $sectionCfg['levelsFromRoot']
                         $pageCfg['pathFromRoot'] = "$( $sectionCfg['pathFromRoot'] )$( [io.path]::DirectorySeparatorChar )$( $pageCfg['nameCompat'] )"
@@ -607,6 +621,7 @@ Function New-SectionGroupConversionConfig {
                         $pageCfg['uri'] = "$( $sectionCfg['object'].path )/$( $page.name )" # There's no $page.path property, so we generate one. E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup/mysection/mypage
                         $pageCfg['dateTime'] = [Datetime]::ParseExact($page.dateTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
                         $pageCfg['lastModifiedTime'] = [Datetime]::ParseExact($page.lastModifiedTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
+                        $pageCfg['lastModifiedTimeEpoch'] = Get-Date $pageCfg['lastModifiedTime'] -UFormat '%s' # Epoch
                         $pageCfg['pageLevel'] = $page.pageLevel -as [int]
                         $pageCfg['converter'] = switch ($config['conversion']['value']) {
                             1 { 'markdown' }
@@ -679,7 +694,11 @@ Function New-SectionGroupConversionConfig {
                         $pageCfg['mediaParentPath'] = Split-Path $pageCfg['mediaPath'] -Parent
                         $pageCfg['mediaPathPandoc'] = $pageCfg['mediaPath'].Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
                         $pageCfg['mediaParentPathPandoc'] = (Split-Path $pageCfg['mediaPathPandoc'] -Parent).Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
-                        $pageCfg['fullexportpath'] = [io.path]::combine( $cfg['notesDocxDirectory'], "$( $pageCfg['pathFromRootCompat'] ).docx" )
+                        $pageCfg['fullexportpath'] = if ($config['docxNamingConvention']['value'] -eq 1) {
+                            [io.path]::combine( $cfg['notesDocxDirectory'], "$( $pageCfg['id'] )-$( $pageCfg['lastModifiedTimeEpoch'] ).docx" )
+                        }else {
+                            [io.path]::combine( $cfg['notesDocxDirectory'], "$( $pageCfg['pathFromRootCompat'] ).docx" )
+                        }
                         $pageCfg['insertedAttachments'] = @(
                             & {
                                 $pagexml = Get-OneNotePageContent -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID
