@@ -601,6 +601,7 @@ Function New-SectionGroupConversionConfig {
                         }
                         $pageCfg['pagePrefix'] = & {
                             if ($pageCfg['pageLevel'] -eq 1) {
+                                # 1 -> 1, 2 -> 1, or 3 -> 1
                                 ''
                             }else {
                                 if ($previousPage) {
@@ -612,14 +613,7 @@ Function New-SectionGroupConversionConfig {
                                         "$( Split-Path $previousPage['filePathRel'] -Parent )$( [io.path]::DirectorySeparatorChar )"
                                     }else {
                                         # 3 -> 2
-                                        $previousLevel1Page = @(
-                                            $sectionCfg['pages'] | Where-Object { $_['pageLevel'] }
-                                        )
-                                        if ($previousLevel1Page.Count -gt 0) {
-                                            "$( Split-Path (Split-Path $previousPage['filePathRel'] -Parent) -Parent )$( [io.path]::DirectorySeparatorChar )"
-                                        }else {
-                                            ''
-                                        }
+                                        "$( Split-Path (Split-Path $previousPage['filePathRel'] -Parent) -Parent )$( [io.path]::DirectorySeparatorChar )"
                                     }
                                 }else {
                                     ''
