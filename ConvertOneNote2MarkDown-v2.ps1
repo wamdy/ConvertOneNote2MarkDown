@@ -997,33 +997,35 @@ Function Convert-OneNotePage {
             }
 
             # Rename images to have unique names - NoteName-Image#-HHmmssff.xyz
-            $images = Get-ChildItem -Path "$( $pageCfg['mediaPath'] )" -Include "*.png", "*.gif", "*.jpg", "*.jpeg" -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name.SubString(0, 5) -match "image" }
-            foreach ($image in $images) {
-                # Rename Image
-                try {
-                    $newimageName = if ($config['medialocation']['value'] -eq 2) {
-                        "$( $pageCfg['filePathRelUnderscore'] )-$($image.BaseName)$($image.Extension)"
-                    }else {
-                        "$( $pageCfg['pathFromRootCompat'] )-$($image.BaseName)$($image.Extension)"
+            if ($config['dryRun']['value'] -eq 1) {
+                $images = Get-ChildItem -Path "$( $pageCfg['mediaPath'] )" -Include "*.png", "*.gif", "*.jpg", "*.jpeg" -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name.SubString(0, 5) -match "image" }
+                foreach ($image in $images) {
+                    # Rename Image
+                    try {
+                        $newimageName = if ($config['medialocation']['value'] -eq 2) {
+                            "$( $pageCfg['filePathRelUnderscore'] )-$($image.BaseName)$($image.Extension)"
+                        }else {
+                            "$( $pageCfg['pathFromRootCompat'] )-$($image.BaseName)$($image.Extension)"
+                        }
+                        $newimagePath = [io.path]::combine( $pageCfg['mediaPath'], $newimageName )
+                        "Renaming image: $( $image.FullName ) to $( $newimagePath )" | Write-Verbose
+                        if ($config['dryRun']['value'] -eq 1) {
+                            $item = Move-Item -Path "$( $image.FullName )" -Destination $newimagePath -Force -ErrorAction Stop -PassThru
+                        }
+                    }catch {
+                        Write-Error "Error while renaming image $( $image.FullName ) to $( $item.FullName ): $( $_.Exception.Message )"
                     }
-                    $newimagePath = [io.path]::combine( $pageCfg['mediaPath'], $newimageName )
-                    "Renaming image: $( $image.FullName ) to $( $newimagePath )" | Write-Verbose
-                    if ($config['dryRun']['value'] -eq 1) {
-                        $item = Move-Item -Path "$( $image.FullName )" -Destination $newimagePath -Force -ErrorAction Stop -PassThru
+                    # Change MD file Image filename References
+                    try {
+                        "Mutation of markdown: Rename image references to unique name" | Write-Verbose
+                        if ($config['dryRun']['value'] -eq 1) {
+                            $content = Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Raw -ErrorAction Stop # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
+                            $content = $content.Replace("$($image.Name)", "$($newimageName)")
+                            Set-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
+                        }
+                    }catch {
+                        Write-Error "Error while renaming image file name references to '$( $newimageName ): $( $_.Exception.Message )"
                     }
-                }catch {
-                    Write-Error "Error while renaming image $( $image.FullName ) to $( $item.FullName ): $( $_.Exception.Message )"
-                }
-                # Change MD file Image filename References
-                try {
-                    "Mutation of markdown: Rename image references to unique name" | Write-Verbose
-                    if ($config['dryRun']['value'] -eq 1) {
-                        $content = Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Raw -ErrorAction Stop # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
-                        $content = $content.Replace("$($image.Name)", "$($newimageName)")
-                        Set-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
-                    }
-                }catch {
-                    Write-Error "Error while renaming image file name references to '$( $newimageName ): $( $_.Exception.Message )"
                 }
             }
 
