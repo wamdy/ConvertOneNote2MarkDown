@@ -949,15 +949,25 @@ Function Convert-OneNotePage {
             # https://gist.github.com/heardk/ded40b72056cee33abb18f3724e0a580
             # Convert .docx to .md, don't proceed if it fails
             try {
+                # Start-Process has no way of capturing stderr / stdterr to variables, so we need to use temp files.
+                $tmpDir = if ($env:OS -match 'windows') { $env:TEMP } else { '/tmp' }
+                $dateNs = Get-Date -Format "yyyy-MM-dd-HH-mm-ss-fffffff"
+                $stderrFile = "$tmpDir/pandoc-stderr-$dateNs.txt"
+
                 "Converting docx file to markdown file: $( $pageCfg['fullfilepathwithoutextension'] ).md" | Write-Verbose
                 if ($config['dryRun']['value'] -eq 1) {
-                    $process = Start-Process -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList @( '-f', 'docx', '-t', "$( $pageCfg['converter'] )-simple_tables-multiline_tables-grid_tables+pipe_tables", '-i', $pageCfg['fullexportpath'], '-o', "$( $pageCfg['fullfilepathwithoutextension'] ).md", '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" ) # extracts into ./media of the supplied folder
-                    if ($process.ExitCode) {
-                        throw 'pandoc failed to convert'
+                    $process = Start-Process -ErrorAction Stop -RedirectStandardError $stderrFile -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList @( '-f', 'docx', '-t', "$( $pageCfg['converter'] )-simple_tables-multiline_tables-grid_tables+pipe_tables", '-i', $pageCfg['fullexportpath'], '-o', "$( $pageCfg['fullfilepathwithoutextension'] ).md", '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" ) *>&1  # extracts into ./media of the supplied folder
+                    if ($process.ExitCode -ne 0) {
+                        $stderr = Get-Content $stderrFile -Raw
+                        throw "pandoc failed to convert: $stderr"
                     }
                 }
             }catch {
                 throw "Error while converting docx file $( $pageCfg['fullexportpath'] ) to markdown file $( $pageCfg['fullfilepathwithoutextension'] ).md: $( $_.Exception.Message )"
+            }finally {
+                if (Test-Path $stderrFile) {
+                    Remove-Item $stderrFile -Force
+                }
             }
 
             # Cleanup Word files
@@ -1055,6 +1065,7 @@ Function Convert-OneNotePage {
 
             "Markdown file ready: $( $pageCfg['fullfilepathwithoutextension'] ).md" | Write-Host -ForegroundColor Green
         }catch {
+            Write-Host "Failed to convert page: $( $pageCfg['pathFromRoot'] ). Reason: $( $_.Exception.Message )" -ForegroundColor Red
             Write-Error "Failed to convert page: $( $pageCfg['pathFromRoot'] ). Reason: $( $_.Exception.Message )"
         }
     }
@@ -1117,7 +1128,7 @@ Function Print-ConversionErrors {
 
     if ($ErrorCollection.Count -gt 0) {
         "Conversion errors: " | Write-Host
-        $ErrorCollection | Where-Object { (Get-Member -InputObject $_ -Name 'CategoryInfo') -and ($_.CategoryInfo.Reason -match 'WriteErrorException') } | Write-Host
+        $ErrorCollection | Where-Object { (Get-Member -InputObject $_ -Name 'CategoryInfo') -and ($_.CategoryInfo.Reason -match 'WriteErrorException') } | Write-Host -ForegroundColor Red
     }
 }
 

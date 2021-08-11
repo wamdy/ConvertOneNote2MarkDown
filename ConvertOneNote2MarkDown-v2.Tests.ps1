@@ -1392,6 +1392,21 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
             $err.Exception.Message | Select-Object -First 1 | Should -match 'Failed to convert page'
         }
 
+        It "Logs pandoc errors" {
+            Mock Start-Process {
+                [PSCustomObject]@{
+                    ExitCode = 1
+                }
+            }
+            Mock Get-Content {
+                'i am some error from pandoc'
+            }
+
+            $err = Convert-OneNotePage @params 6>$null 2>&1
+
+            $err.Exception.Message | Select-Object -First 1 | Should -match 'i am some error from pandoc'
+        }
+
         It "Saves page attachment(s)" {
             Convert-OneNotePage @params 6>$null
 
