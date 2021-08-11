@@ -718,15 +718,22 @@ Function New-SectionGroupConversionConfig {
                                 "$( '../' * ($pageCfg['levelsFromRoot'] + $pageCfg['pageLevel'] - 1) )"
                             }
                         }
+                        $pageCfg['tmpPath'] = & {
+                            $dateNs = Get-Date -Format "yyyy-MM-dd-HH-mm-ss-fffffff"
+                            if ($env:OS -match 'windows') {
+                                [io.path]::combine($env:TEMP, $dateNs)
+                            }else {
+                                [io.path]::combine('/tmp', $dateNs)
+                            }
+                        }
                         $pageCfg['mediaParentPath'] = if ($config['medialocation']['value'] -eq 2) {
                             $pageCfg['fullexportdirpath']
                         }else {
                             $cfg['notesBaseDirectory']
                         }
                         $pageCfg['mediaPath'] = [io.path]::combine( $pageCfg['mediaParentPath'], 'media' )
-                        $pageCfg['mediaParentPath'] = Split-Path $pageCfg['mediaPath'] -Parent
-                        $pageCfg['mediaPathPandoc'] = $pageCfg['mediaPath'].Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
-                        $pageCfg['mediaParentPathPandoc'] = (Split-Path $pageCfg['mediaPathPandoc'] -Parent).Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
+                        $pageCfg['mediaParentPathPandoc'] = [io.path]::combine( $pageCfg['tmpPath'] ).Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
+                        $pageCfg['mediaPathPandoc'] = [io.path]::combine( $pageCfg['tmpPath'], 'media').Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
                         $pageCfg['fullexportpath'] = if ($config['docxNamingConvention']['value'] -eq 1) {
                             [io.path]::combine( $cfg['notesDocxDirectory'], "$( $pageCfg['id'] )-$( $pageCfg['lastModifiedTimeEpoch'] ).docx" )
                         }else {
@@ -850,9 +857,13 @@ Function New-SectionGroupConversionConfig {
                             @(
                                 $cfg['notesDocxDirectory']
                                 $cfg['notesDirectory']
+                                $pageCfg['tmpPath']
                                 $pageCfg['fullexportdirpath']
                                 $pageCfg['mediaPath']
                             ) | Select-Object -Unique
+                        )
+                        $pageCfg['directoriesToDelete'] = @(
+                            $pageCfg['tmpPath']
                         )
                         $pageCfg['directorySeparatorChar'] = [io.path]::DirectorySeparatorChar
 
@@ -980,12 +991,9 @@ Function Convert-OneNotePage {
 
             # https://gist.github.com/heardk/ded40b72056cee33abb18f3724e0a580
             # Convert .docx to .md, don't proceed if it fails
+            $stderrFile = "$( $pageCfg['tmpPath'] )/pandoc-stderr.txt"
             try {
                 # Start-Process has no way of capturing stderr / stdterr to variables, so we need to use temp files.
-                $tmpDir = if ($env:OS -match 'windows') { $env:TEMP } else { '/tmp' }
-                $dateNs = Get-Date -Format "yyyy-MM-dd-HH-mm-ss-fffffff"
-                $stderrFile = "$tmpDir/pandoc-stderr-$dateNs.txt"
-
                 "Converting docx file to markdown file: $( $pageCfg['fullfilepathwithoutextension'] ).md" | Write-Verbose
                 if ($config['dryRun']['value'] -eq 1) {
                     $process = Start-Process -ErrorAction Stop -RedirectStandardError $stderrFile -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList @( '-f', 'docx', '-t', "$( $pageCfg['converter'] )-simple_tables-multiline_tables-grid_tables+pipe_tables", '-i', $pageCfg['fullexportpath'], '-o', "$( $pageCfg['fullfilepathwithoutextension'] ).md", '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" ) *>&1  # extracts into ./media of the supplied folder
@@ -1030,7 +1038,7 @@ Function Convert-OneNotePage {
 
             # Rename images to have unique names - NoteName-Image#-HHmmssff.xyz
             if ($config['dryRun']['value'] -eq 1) {
-                $images = Get-ChildItem -Path "$( $pageCfg['mediaPath'] )" -Include "*.png", "*.gif", "*.jpg", "*.jpeg" -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name.SubString(0, 5) -match "image" }
+                $images = Get-ChildItem -Path $pageCfg['mediaPathPandoc'] -Recurse -Force -ErrorAction SilentlyContinue
                 foreach ($image in $images) {
                     # Rename Image
                     try {
@@ -1040,7 +1048,7 @@ Function Convert-OneNotePage {
                             "$( $pageCfg['pathFromRootCompat'] )-$($image.BaseName)$($image.Extension)"
                         }
                         $newimagePath = [io.path]::combine( $pageCfg['mediaPath'], $newimageName )
-                        "Renaming image: $( $image.FullName ) to $( $newimagePath )" | Write-Verbose
+                        "Moving image: $( $image.FullName ) to $( $newimagePath )" | Write-Verbose
                         if ($config['dryRun']['value'] -eq 1) {
                             $item = Move-Item -Path "$( $image.FullName )" -Destination $newimagePath -Force -ErrorAction Stop -PassThru
                         }
@@ -1049,7 +1057,7 @@ Function Convert-OneNotePage {
                     }
                     # Change MD file Image filename References
                     try {
-                        "Mutation of markdown: Rename image references to unique name" | Write-Verbose
+                        "Mutation of markdown: Rename image references to unique name. Find '$( $image.Name )', Replacement: '$( $newimageName )'" | Write-Verbose
                         if ($config['dryRun']['value'] -eq 1) {
                             $content = Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Raw -ErrorAction Stop # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
                             $content = $content.Replace("$($image.Name)", "$($newimageName)")
@@ -1081,7 +1089,7 @@ Function Convert-OneNotePage {
                 foreach ($m in $pageCfg['mutations']) {
                     foreach ($r in $m['replacements']) {
                         try {
-                            "Mutation of markdown: $( $m['description'] )" | Write-Verbose
+                            "Mutation of markdown: $( $m['description'] ). Regex: '$( $r['searchRegex'] )', Replacement: '$( $r['replacement'].Replace("`r", '\r').Replace("`n", '\n') )'" | Write-Verbose
                             if ($config['dryRun']['value'] -eq 1) {
                                 $content = $content -replace $r['searchRegex'], $r['replacement']
                             }

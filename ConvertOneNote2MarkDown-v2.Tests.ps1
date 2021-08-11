@@ -821,21 +821,24 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             $result.Count | Should -Be 30
 
             # Test the first object
-            $regex = "^$( [regex]::Escape($params['Config']['notesdestpath']['value']) )"
-            $regexPandoc = "^$( [regex]::Escape($params['Config']['notesdestpath']['value'].Replace([io.path]::DirectorySeparatorChar, '/')) )"
             $pageCfg = $result[0]
+            $regex = "^$( [regex]::Escape($params['Config']['notesdestpath']['value']) )"
+            $regexTmp = "^$( [regex]::Escape($pageCfg['tmpPath']) )"
             $pageCfg['fullexportdirpath'] | Should -Match $regex
             $pageCfg['fullfilepathwithoutextension'] | Should -Match $regex
             $pageCfg['mediaParentPath'] | Should -Match $regex
             $pageCfg['mediaPath'] | Should -Match $regex
-            $pageCfg['mediaParentPathPandoc'] | Should -Match $regexPandoc
-            $pageCfg['mediaPathPandoc'] | Should -Match $regexPandoc
+            $pageCfg['mediaParentPathPandoc'] | Should -Be $pageCfg['tmpPath'].Replace([io.path]::DirectorySeparatorChar, '/')
+            $pageCfg['mediaPathPandoc'] | Should -Be $( [io.path]::combine($pageCfg['tmpPath'], 'media').Replace([io.path]::DirectorySeparatorChar, '/') )
             $pageCfg['fullexportpath'] | Should -Match $regex
             $pageCfg['insertedAttachments'] | ForEach-Object {
                 $_['destination'] | Should -Match $regex
             }
             $pageCfg['directoriesToCreate'] | ForEach-Object {
-                $_ | Should -Match $regex
+                ($_ -match $regex) -or ($_ -match $regexTmp) | Should -Be $true
+            }
+            $pageCfg['directoriesToDelete'] | ForEach-Object {
+                $_ | Should -Match $regexTmp
             }
         }
 
