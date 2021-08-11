@@ -595,7 +595,8 @@ Function New-SectionGroupConversionConfig {
                 $sectionCfg['pathFromRootCompat'] = $sectionCfg['pathFromRoot'] | Remove-InvalidFileNameChars
                 $sectionCfg['uri'] = $section.path # E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup/mysection
                 $sectionCfg['lastModifiedTime'] = [Datetime]::ParseExact($section.lastModifiedTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
-                $sectionCfg['lastModifiedTimeEpoch'] = Get-Date $sectionCfg['lastModifiedTime'] -UFormat '%s' # Epoch
+                $sectionCfg['lastModifiedTimeEpoch'] = [int][double]::Parse((Get-Date ((Get-Date $sectionCfg['lastModifiedTime']).ToUniversalTime()) -UFormat %s)) # Epoch
+
                 $sectionCfg['pages'] = [System.Collections.ArrayList]@()
 
                 # Build Section's pages
@@ -621,7 +622,7 @@ Function New-SectionGroupConversionConfig {
                         $pageCfg['uri'] = "$( $sectionCfg['object'].path )/$( $page.name )" # There's no $page.path property, so we generate one. E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup/mysection/mypage
                         $pageCfg['dateTime'] = [Datetime]::ParseExact($page.dateTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
                         $pageCfg['lastModifiedTime'] = [Datetime]::ParseExact($page.lastModifiedTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
-                        $pageCfg['lastModifiedTimeEpoch'] = Get-Date $pageCfg['lastModifiedTime'] -UFormat '%s' # Epoch
+                        $pageCfg['lastModifiedTimeEpoch'] = [int][double]::Parse((Get-Date ((Get-Date $pageCfg['lastModifiedTime']).ToUniversalTime()) -UFormat %s)) # Epoch
                         $pageCfg['pageLevel'] = $page.pageLevel -as [int]
                         $pageCfg['converter'] = switch ($config['conversion']['value']) {
                             1 { 'markdown' }
