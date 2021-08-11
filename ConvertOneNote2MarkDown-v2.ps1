@@ -407,6 +407,38 @@ Function Encode-Markdown {
     }
     $Name
 }
+
+Function Set-ContentNoBom {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true,Position = 0,ValueFromPipeline = $true,ValueFromPipelineByPropertyName = $true)]
+        [AllowEmptyString()]
+        [string]
+        $Path
+    ,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [array]
+        $Value
+    )
+    process {
+        if ($PSVersionTable.PSVersion.Major -le 5) {
+            try {
+                $content = $Value -join ''
+                [IO.File]::WriteAllLines($Path, $content)
+            }catch {
+                if ($ErrorActionPreference -eq 'Stop') {
+                    throw
+                }else {
+                    Write-Error -ErrorRecord $_
+                }
+            }
+        }else {
+            Set-Content @PSBoundParameters
+        }
+    }
+}
+
 Function New-OneNoteConnection {
     [CmdletBinding()]
     param ()
@@ -1021,7 +1053,7 @@ Function Convert-OneNotePage {
                         if ($config['dryRun']['value'] -eq 1) {
                             $content = Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Raw -ErrorAction Stop # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
                             $content = $content.Replace("$($image.Name)", "$($newimageName)")
-                            Set-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
+                            Set-ContentNoBom -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
                         }
                     }catch {
                         Write-Error "Error while renaming image file name references to '$( $newimageName ): $( $_.Exception.Message )"
@@ -1059,7 +1091,7 @@ Function Convert-OneNotePage {
                     }
                 }
                 if ($config['dryRun']['value'] -eq 1) {
-                    Set-Content "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
+                    Set-ContentNoBom "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
                 }
             }catch {
                 Write-Error "Error while mutating markdown content: $( $_.Exception.Message )"

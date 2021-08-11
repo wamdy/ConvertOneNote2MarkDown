@@ -1325,7 +1325,8 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
             Mock Get-Content {
                 ''
             }
-            Mock Set-Content {}
+            function Set-ContentNoBom {}
+            Mock Set-ContentNoBom {}
             $params = @{
                 OneNoteConnection = 'some connection'
                 Config = Get-DefaultConfiguration
@@ -1440,7 +1441,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
             Convert-OneNotePage @params 6>$null
 
             Assert-MockCalled -CommandName Get-Content -Times 1
-            Assert-MockCalled -CommandName Set-Content -Times 1
+            Assert-MockCalled -CommandName Set-ContentNoBom -Times 1
         }
 
         It "Does not halt conversion if renaming image(s) references in markdown fails" {
@@ -1455,7 +1456,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
             Convert-OneNotePage @params 6>$null
 
             Assert-MockCalled -CommandName Get-Content -Times 1
-            Assert-MockCalled -CommandName Set-Content -Times 1
+            Assert-MockCalled -CommandName Set-ContentNoBom -Times 1
         }
 
         It "Does a dry run" {
@@ -1465,7 +1466,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
             Mock Start-Process { 'foo' }
             Mock Move-Item { 'foo' }
             Mock Get-Content { 'foo' }
-            Mock Set-Content { 'foo' }
+            Mock Set-ContentNoBom { 'foo' }
 
             $params['Config']['DryRun']['value'] = 2
 
