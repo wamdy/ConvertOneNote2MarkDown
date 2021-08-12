@@ -64,8 +64,9 @@ $headerTimestampEnabled = 1
 $keepspaces = 1
 
 # Whether to clear escape symbols from md files
-# 1: Clear '\' symbol escape character from files - Default
-# 2: Keep '\' symbol escape
+# 1: Clear all '\' characters  - Default
+# 2: Clear all '\' characters except those preceding alphanumeric characters
+# 3: Keep '\' symbol escape
 $keepescape = 1
 
 # Whether to use Line Feed (LF) or Carriage Return + Line Feed (CRLF) for new lines
