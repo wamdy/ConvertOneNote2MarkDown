@@ -150,7 +150,7 @@ Whether to clear escape symbols from md files
 '@
             default = 1
             value = 1
-            validateRange = 1,2
+            validateRange = 1,3
         }
         newlineCharacter = @{
             description = @'
