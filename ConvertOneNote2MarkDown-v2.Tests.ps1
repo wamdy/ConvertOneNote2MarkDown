@@ -1061,6 +1061,10 @@ hello world $( [char]0x00A0 )
 - foo
 
 - bar
+
+>
+
+some other text
 "@
 
                 # Mutate
@@ -1072,10 +1076,12 @@ hello world $( [char]0x00A0 )
 
                 # Should remove newlines between bullets, and remove non-breaking spaces. Ignore first 8 lines for page header
                 $fakeMarkdownContent = $fakeMarkdownContent -split "`n"
-                $fakeMarkdownContent.Count | Should -Be 11
+                $fakeMarkdownContent.Count | Should -Be 13
                 $fakeMarkdownContent[8] | Should -Not -Match [char]0x00A0
                 $fakeMarkdownContent[9] | Should -Match '^- foo\s*$'
                 $fakeMarkdownContent[10] | Should -Match '^- bar\s*$'
+                $fakeMarkdownContent[11] | Should -Match '^$'
+                $fakeMarkdownContent[12] | Should -Match '^some other text$'
             }
 
             $params['Config']['keepspaces']['value'] = 2
