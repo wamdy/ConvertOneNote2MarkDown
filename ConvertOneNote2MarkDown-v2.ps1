@@ -610,6 +610,7 @@ Function New-SectionGroupConversionConfig {
             # E.g. 0..(5-1-1) -> 'c:\temp\notes\mynotebook'
             $split[0..($totalLevels - $cfg['levelsFromRoot'] - 1)] -join [io.path]::DirectorySeparatorChar
         }
+        $cfg['notebookName'] = Split-Path $cfg['notesBaseDirectory'] -Leaf
         $cfg['pathFromRoot'] = $cfg['notesDirectory'].Replace($cfg['notesBaseDirectory'], '').Trim([io.path]::DirectorySeparatorChar)
         $cfg['pathFromRootCompat'] = $cfg['pathFromRoot'] | Remove-InvalidFileNameChars
         $cfg['notesDocxDirectory'] = [io.path]::combine( $cfg['notesBaseDirectory'], 'docx' )
@@ -627,6 +628,7 @@ Function New-SectionGroupConversionConfig {
                 "$( '#' * ($LevelsFromRoot + 1) ) Building conversion configuration for $( $section.name ) [Section]" | Write-Host -ForegroundColor DarkGray
 
                 $sectionCfg = [ordered]@{}
+                $sectionCfg['notebookName'] = $cfg['notebookName']
                 $sectionCfg['notesBaseDirectory'] = $cfg['notesBaseDirectory']
                 $sectionCfg['notesDirectory'] = $cfg['notesDirectory']
                 $sectionCfg['sectionGroupUri'] = $cfg['uri'] # Keep a reference to my Section Group Configuration object's uri
@@ -651,6 +653,7 @@ Function New-SectionGroupConversionConfig {
 
                         $previousPage = if ($sectionCfg['pages'].Count -gt 0) { $sectionCfg['pages'][$sectionCfg['pages'].Count - 1] } else { $null }
                         $pageCfg = [ordered]@{}
+                        $pageCfg['notebookName'] = $cfg['notebookName']
                         $pageCfg['notesBaseDirectory'] = $cfg['notesBaseDirectory']
                         $pageCfg['notesDirectory'] = $cfg['notesDirectory']
                         $pageCfg['sectionGroupUri'] = $cfg['uri'] # Keep a reference to mt Section Group Configuration object's uri
@@ -734,9 +737,9 @@ Function New-SectionGroupConversionConfig {
                         $pageCfg['tmpPath'] = & {
                             $dateNs = Get-Date -Format "yyyy-MM-dd-HH-mm-ss-fffffff"
                             if ($env:OS -match 'windows') {
-                                [io.path]::combine($env:TEMP, $dateNs)
+                                [io.path]::combine($env:TEMP, $cfg['notebookName'], $dateNs)
                             }else {
-                                [io.path]::combine('/tmp', $dateNs)
+                                [io.path]::combine('/tmp', $cfg['notebookName'], $dateNs)
                             }
                         }
                         $pageCfg['mediaParentPath'] = if ($config['medialocation']['value'] -eq 2) {
