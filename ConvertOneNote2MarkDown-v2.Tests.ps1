@@ -349,11 +349,19 @@ Describe "Encode-Markdown" -Tag 'Unit' {
 
     Context 'Behavior' {
 
-        It "Should encode given content in markdown" {
-            $content = '\*_{}[]()#+-.!`'
+        $content = '\*_{}[]()#+-.!`'
+        It "Should markdown-encode given content" {
             $expectedContent = '\\\*\_\{\}\[\]\(\)\#\+\-\.\!```'
 
             $result = Encode-Markdown -Name $content
+
+            $result | Should -Be $expectedContent
+        }
+
+        It "Should markdown-encode given content (URIs)" {
+            $expectedContent = '\*_{}\[\]\(\)#+-.!`'
+
+            $result = Encode-Markdown -Name $content -Uri
 
             $result | Should -Be $expectedContent
         }
@@ -749,8 +757,8 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             foreach ($pageCfg in $result) {
                 $pageCfg['insertedAttachments'].Count | Should -Be 2
 
-                $pageCfg['insertedAttachments'][0]['markdownFileName'] | Should -Be 'attachment1\(something\-in\-brackets\)\.txt'
-                $pageCfg['insertedAttachments'][1]['markdownFileName'] | Should -Be 'attachment2\(something\-in\-brackets\)\.txt'
+                $pageCfg['insertedAttachments'][0]['markdownFileName'] | Should -Be 'attachment1\(something-in-brackets\).txt'
+                $pageCfg['insertedAttachments'][1]['markdownFileName'] | Should -Be 'attachment2\(something-in-brackets\).txt'
             }
         }
 
