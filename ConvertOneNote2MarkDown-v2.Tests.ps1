@@ -1310,7 +1310,8 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
                     FullName = 'foo'
                 }
             }
-            Mock Remove-Item -ParameterFilter { $Path -and $Force } {}
+            Mock Remove-Item {}
+            Mock Remove-Item -ParameterFilter { $LiteralPath -and $Force } {}
             function Publish-OneNotePageToDocx{}
             Mock Publish-OneNotePageToDocx {}
             Mock Start-Process {
@@ -1319,6 +1320,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
                 }
             }
             Mock Test-Path { $false }
+            Mock Test-Path -ParameterFilter { $LiteralPath } { $false }
             Mock Copy-Item {}
             Mock Get-ChildItem {
                 [pscustomobject]@{
@@ -1337,12 +1339,41 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
                 }
             }
             function Get-Content { # Create this function for the sake of a "bug" in pester where calls to the Get-Content mock spits out a non-terminating pester error: A parameter cannot be found that matches parameter name 'Raw'
+                param (
+                    [Parameter()]
+                    [string]
+                    $Path
+                ,
+                    [Parameter()]
+                    [string]
+                    $LiteralPath
+                ,
+                    [Parameter()]
+                    [switch]
+                    $Raw
+                )
                 ''
             }
             Mock Get-Content {
                 ''
             }
-            function Set-ContentNoBom {}
+            Mock Get-Content -ParameterFilter { $LiteralPath -and $Raw } {
+                ''
+            }
+            Mock Get-Content -ParameterFilter { $LiteralPath -and ! $Raw } {
+                ''
+            }
+            function Set-ContentNoBom {
+                param (
+                    [Parameter()]
+                    [string]
+                    $LiteralPath
+                ,
+                    [Parameter()]
+                    [string]
+                    $Value
+                )
+            }
             Mock Set-ContentNoBom {}
             $params = @{
                 OneNoteConnection = 'some connection'
@@ -1366,19 +1397,21 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         }
 
         It "Removes existing docx by default" {
-            Mock Test-Path { $true }
+            Mock Test-Path -ParameterFilter { $LiteralPath } { $true }
 
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName Remove-Item -ParameterFilter { $Path -and $Force } -Times 2
+            Assert-MockCalled -CommandName Remove-Item -ParameterFilter { $LiteralPath -and $Force } -Times 2
         }
 
         It "Halts converting if removal of existing docx fails" {
-            Mock Test-Path { $true }
-            Mock Remove-Item -ParameterFilter { $Path -and $Force } { throw }
+            Mock Test-Path -ParameterFilter { $LiteralPath } { $true }
+            Mock Remove-Item -ParameterFilter { $LiteralPath -and $Force } { throw }
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
+            Assert-MockCalled -CommandName Test-Path -ParameterFilter { $LiteralPath } -Times 1
+            Assert-MockCalled -CommandName Remove-Item -ParameterFilter { $LiteralPath -and $Force } -Times 1
             $err.Exception.Message | Select-Object -First 1 | Should -match 'Failed to convert page'
         }
 
@@ -1457,12 +1490,12 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         It "Markdown Mutation: Rename page image references in markdown to unique names" {
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName Get-Content -Times 1
-            Assert-MockCalled -CommandName Set-ContentNoBom -Times 1
+            Assert-MockCalled -CommandName Get-Content -ParameterFilter { $LiteralPath -and $Raw } -Times 1
+            Assert-MockCalled -CommandName Set-ContentNoBom -ParameterFilter { $LiteralPath } -Times 1
         }
 
         It "Does not halt conversion if renaming image(s) references in markdown fails" {
-            Mock Get-Content { throw }
+            Mock Get-Content -ParameterFilter { $LiteralPath -and $Raw } { throw }
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
@@ -1472,8 +1505,8 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         It "Markdown mutation: Performs mutations on markdown content" {
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName Get-Content -Times 1
-            Assert-MockCalled -CommandName Set-ContentNoBom -Times 1
+            Assert-MockCalled -CommandName Get-Content -ParameterFilter { $LiteralPath -and ! $Raw } -Times 1
+            Assert-MockCalled -CommandName Set-ContentNoBom -ParameterFilter { $LiteralPath } -Times 1
         }
 
         It "Does a dry run" {
