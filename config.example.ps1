@@ -58,7 +58,7 @@ $conversion = 1
 # 2: Don't include
 $headerTimestampEnabled = 1
 
-# Whether to clear double spaces between bullets
+# Whether to clear double spaces between bullets, non-breaking spaces from blank lines, and '>` after bullet lists
 # 1: Clear double spaces in bullets - Default
 # 2: Keep double spaces
 $keepspaces = 1

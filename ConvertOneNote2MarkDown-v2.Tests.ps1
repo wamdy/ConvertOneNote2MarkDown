@@ -994,6 +994,7 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             $result.Count | Should -Be 30
 
             foreach ($pageCfg in $result) {
+                # The first line will be replaced by page header (8 lines)
                 $fakeMarkdownContent = ''
 
                 # Mutate
@@ -1054,34 +1055,40 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             # 15 pages from 'test' notebook, 15 pages from 'test2' notebook
             $result.Count | Should -Be 30
 
-            foreach ($pageCfg in $result) {
-                $fakeMarkdownContent = @"
+            # The first line will be replaced by page header (8 lines)
+            $fakeMarkdownContent = @"
 
-hello world $( [char]0x00A0 )
+hello world$( [char]0x00A0 )
 - foo
 
 - bar
 
 >
+>
+> some other text
+"@ -replace "`r", '' # On some Windows Powershell 5 versions, a here-string will contain `\r`, so let's ensure that doesn't happen.
 
-some other text
-"@
-
+            foreach ($pageCfg in $result) {
                 # Mutate
+                $mutated = $fakeMarkdownContent
                 foreach ($m in $pageCfg['mutations']) {
                     foreach ($r in $m['replacements']) {
-                        $fakeMarkdownContent = $fakeMarkdownContent -replace $r['searchRegex'], $r['replacement']
+                        $mutated = $mutated -replace $r['searchRegex'], $r['replacement']
                     }
                 }
 
                 # Should remove newlines between bullets, and remove non-breaking spaces. Ignore first 8 lines for page header
-                $fakeMarkdownContent = $fakeMarkdownContent -split "`n"
-                $fakeMarkdownContent.Count | Should -Be 13
-                $fakeMarkdownContent[8] | Should -Not -Match [char]0x00A0
-                $fakeMarkdownContent[9] | Should -Match '^- foo\s*$'
-                $fakeMarkdownContent[10] | Should -Match '^- bar\s*$'
-                $fakeMarkdownContent[11] | Should -Match '^$'
-                $fakeMarkdownContent[12] | Should -Match '^some other text$'
+                $split = $mutated -split "`n"
+                $expectedBody = $split[8..($split.Count - 1)] -join "`n"
+                $expectedBody | Should -Be $( @"
+hello world
+- foo
+- bar
+
+
+
+some other text
+"@ -replace "`r", '') # On some Windows Powershell 5 versions, a here-string will contain `\r`, so let's ensure that doesn't happen.
             }
 
             $params['Config']['keepspaces']['value'] = 2
@@ -1092,28 +1099,27 @@ some other text
             $result.Count | Should -Be 30
 
             foreach ($pageCfg in $result) {
-                $fakeMarkdownContent = @"
-
-hello world $( [char]0x00A0 )
-- foo
-
-- bar
-"@
-
                 # Mutate
+                $mutated = $fakeMarkdownContent
                 foreach ($m in $pageCfg['mutations']) {
                     foreach ($r in $m['replacements']) {
-                        $fakeMarkdownContent = $fakeMarkdownContent -replace $r['searchRegex'], $r['replacement']
+                        $mutated = $mutated -replace $r['searchRegex'], $r['replacement']
                     }
                 }
 
                 # Should keep newlines between bullets, and keep non-breaking spaces. Ignore first 8 lines for page header
-                $fakeMarkdownContent = $fakeMarkdownContent -split "`n"
-                $fakeMarkdownContent.Count | Should -Be 12
-                $fakeMarkdownContent[8] | Should -Not -Match [char]0x00A0
-                $fakeMarkdownContent[9] | Should -Match '^- foo\s*$'
-                $fakeMarkdownContent[10] | Should -Match '^\s*$'
-                $fakeMarkdownContent[11] | Should -Match '^- bar\s*$'
+                $split = $mutated -split "`n"
+                $expectedBody = $split[8..($split.Count - 1)] -join "`n"
+                $expectedBody | Should -Be $( @"
+hello world$( [char]0x00A0 )
+- foo
+
+- bar
+
+>
+>
+> some other text
+"@ -replace "`r", '') # On some Windows Powershell 5 versions, a here-string will contain `\r`, so let's ensure that doesn't happen.
             }
 
         }
@@ -1127,6 +1133,7 @@ hello world $( [char]0x00A0 )
             $result.Count | Should -Be 30
 
             foreach ($pageCfg in $result) {
+                # The first line will be replaced by page header (8 lines)
                 $fakeMarkdownContent = @"
 
 hello\$\^\\\*\_\[\]world
@@ -1154,6 +1161,7 @@ foo\bar\0
             $result.Count | Should -Be 30
 
             foreach ($pageCfg in $result) {
+                # The first line will be replaced by page header (8 lines)
                 $fakeMarkdownContent = @'
 
 hello\$\^\\\*\_\[\]world
@@ -1182,6 +1190,7 @@ foo\bar\0
             $result.Count | Should -Be 30
 
             foreach ($pageCfg in $result) {
+                # The first line will be replaced by page header (8 lines)
                 $fakeMarkdownContent = @'
 
 hello\$\^\\\*\_\[\]world
@@ -1212,6 +1221,7 @@ foo\bar\0
             $result.Count | Should -Be 30
 
             foreach ($pageCfg in $result) {
+                # The first line will be replaced by page header (8 lines)
                 $fakeMarkdownContent = @"
 
 foo`r`nbar`r`nbaz
@@ -1240,6 +1250,7 @@ foo`r`nbar`r`nbaz
             $result.Count | Should -Be 30
 
             foreach ($pageCfg in $result) {
+                # The first line will be replaced by page header (8 lines)
                $fakeMarkdownContent = @"
 
 foo`r`nbar`r`nbaz
