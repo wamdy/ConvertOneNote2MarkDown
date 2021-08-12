@@ -426,7 +426,7 @@ Function Set-ContentNoBom {
         [Parameter(Mandatory = $true,Position = 0,ValueFromPipeline = $true,ValueFromPipelineByPropertyName = $true)]
         [AllowEmptyString()]
         [string]
-        $Path
+        $LiteralPath
     ,
         [Parameter(Mandatory = $true)]
         [AllowEmptyString()]
@@ -437,7 +437,7 @@ Function Set-ContentNoBom {
         if ($PSVersionTable.PSVersion.Major -le 5) {
             try {
                 $content = $Value -join ''
-                [IO.File]::WriteAllLines($Path, $content)
+                [IO.File]::WriteAllLines($LiteralPath, $content)
             }catch {
                 if ($ErrorActionPreference -eq 'Stop') {
                     throw
@@ -984,8 +984,8 @@ Function Convert-OneNotePage {
                 try {
                     "Removing existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
                     if ($config['dryRun']['value'] -eq 1) {
-                        if (Test-Path $pageCfg['fullexportpath']) {
-                            Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                        if (Test-Path -LiteralPath $pageCfg['fullexportpath']) {
+                            Remove-Item -LiteralPath $pageCfg['fullexportpath'] -Force -ErrorAction Stop
                         }
                     }
                 }catch {
@@ -994,7 +994,7 @@ Function Convert-OneNotePage {
             }
 
             # Publish OneNote page to Word, don't proceed if it fails
-            if (! (Test-Path $pageCfg['fullexportpath']) ) {
+            if (! (Test-Path -LiteralPath $pageCfg['fullexportpath']) ) {
                 try {
                     "Publishing new docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
                     if ($config['dryRun']['value'] -eq 1) {
@@ -1033,8 +1033,8 @@ Function Convert-OneNotePage {
                 try {
                     "Removing existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
                     if ($config['dryRun']['value'] -eq 1) {
-                        if (Test-Path $pageCfg['fullexportpath']) {
-                            Remove-Item -path $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                        if (Test-Path -LiteralPath $pageCfg['fullexportpath']) {
+                            Remove-Item -LiteralPath $pageCfg['fullexportpath'] -Force -ErrorAction Stop
                         }
                     }
                 }catch {
@@ -1077,9 +1077,9 @@ Function Convert-OneNotePage {
                     try {
                         "Mutation of markdown: Rename image references to unique name. Find '$( $image.Name )', Replacement: '$( $newimageName )'" | Write-Verbose
                         if ($config['dryRun']['value'] -eq 1) {
-                            $content = Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Raw -ErrorAction Stop # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
+                            $content = Get-Content -LiteralPath "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Raw -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                             $content = $content.Replace("$($image.Name)", "$($newimageName)")
-                            Set-ContentNoBom -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
+                            Set-ContentNoBom -LiteralPath "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                         }
                     }catch {
                         Write-Error "Error while renaming image file name references to '$( $newimageName ): $( $_.Exception.Message )"
@@ -1091,7 +1091,7 @@ Function Convert-OneNotePage {
             try {
                 if ($config['dryRun']['value'] -eq 1) {
                     # Get markdown content
-                    $content = @( Get-Content -Path "$( $pageCfg['fullfilepathwithoutextension'] ).md" -ErrorAction Stop )  # Get-Content -ErrorAction Stop can produce random "Cannot find path 'xxx' because it does not exist"
+                    $content = @( Get-Content -LiteralPath "$( $pageCfg['fullfilepathwithoutextension'] ).md" -ErrorAction Stop ) # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                     $content = @(
                         if ($content.Count -gt 6) {
                             # Discard first 6 lines which contain a header, created date, and time. We are going to add our own header
@@ -1117,7 +1117,7 @@ Function Convert-OneNotePage {
                     }
                 }
                 if ($config['dryRun']['value'] -eq 1) {
-                    Set-ContentNoBom "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop
+                    Set-ContentNoBom -LiteralPath "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                 }
             }catch {
                 Write-Error "Error while mutating markdown content: $( $_.Exception.Message )"
