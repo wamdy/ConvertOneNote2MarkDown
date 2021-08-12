@@ -1129,7 +1129,8 @@ hello world $( [char]0x00A0 )
             foreach ($pageCfg in $result) {
                 $fakeMarkdownContent = @"
 
-foo\bar
+hello\$\^\\\*\_\[\]world
+foo\bar\0
 "@
 
                 # Mutate
@@ -1139,12 +1140,12 @@ foo\bar
                     }
                 }
 
-                # Should remove backslashes. Ignore first 8 lines for page header
+                # Should remove all backslashes. Ignore first 8 lines for page header
                 $fakeMarkdownContent = $fakeMarkdownContent -split "`n"
-                $fakeMarkdownContent.Count | Should -Be 9
-                $fakeMarkdownContent[8] | Should -Match '^foobar\s*$'
+                $fakeMarkdownContent.Count | Should -Be 10
+                $fakeMarkdownContent[8] | Should -Be 'hello$^*_[]world'
+                $fakeMarkdownContent[9] | Should -Be 'foobar0'
             }
-
             $params['Config']['keepescape']['value'] = 2
 
             $result = @( New-SectionGroupConversionConfig @params 6>$null )
@@ -1153,10 +1154,39 @@ foo\bar
             $result.Count | Should -Be 30
 
             foreach ($pageCfg in $result) {
-                $fakeMarkdownContent = @"
+                $fakeMarkdownContent = @'
 
-foo\bar
-"@
+hello\$\^\\\*\_\[\]world
+foo\bar\0
+'@
+
+                # Mutate
+                foreach ($m in $pageCfg['mutations']) {
+                    foreach ($r in $m['replacements']) {
+                        $fakeMarkdownContent = $fakeMarkdownContent -replace $r['searchRegex'], $r['replacement']
+                    }
+                }
+
+                # Should remove backslashes that precede non-alphanumeric characters. Ignore first 8 lines for page header
+                $fakeMarkdownContent = $fakeMarkdownContent -split "`n"
+                $fakeMarkdownContent.Count | Should -Be 10
+                $fakeMarkdownContent[8] | Should -Be 'hello$^\*_[]world'
+                $fakeMarkdownContent[9] | Should -Be 'foo\bar\0'
+            }
+
+            $params['Config']['keepescape']['value'] = 3
+
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 15 pages from 'test' notebook, 15 pages from 'test2' notebook
+            $result.Count | Should -Be 30
+
+            foreach ($pageCfg in $result) {
+                $fakeMarkdownContent = @'
+
+hello\$\^\\\*\_\[\]world
+foo\bar\0
+'@
 
                 # Mutate
                 foreach ($m in $pageCfg['mutations']) {
@@ -1167,8 +1197,9 @@ foo\bar
 
                 # Should keep backslashes. Ignore first 8 lines for page header
                 $fakeMarkdownContent = $fakeMarkdownContent -split "`n"
-                $fakeMarkdownContent.Count | Should -Be 9
-                $fakeMarkdownContent[8] | Should -Match '^foo\\bar\s*$'
+                $fakeMarkdownContent.Count | Should -Be 10
+                $fakeMarkdownContent[8] | Should -Be 'hello\$\^\\\*\_\[\]world'
+                $fakeMarkdownContent[9] | Should -Be 'foo\bar\0'
             }
         }
 

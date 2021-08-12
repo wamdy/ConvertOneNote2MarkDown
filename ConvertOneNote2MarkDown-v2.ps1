@@ -144,8 +144,9 @@ Whether to clear double spaces between bullets
         keepescape = @{
             description = @'
 Whether to clear escape symbols from md files
-1: Clear '\' symbol escape character from files - Default
-2: Keep '\' symbol escape
+1: Clear all '\' characters  - Default
+2: Clear all '\' characters except those preceding alphanumeric characters
+3: Keep '\' symbol escape
 '@
             default = 1
             value = 1
@@ -837,11 +838,22 @@ Function New-SectionGroupConversionConfig {
                             }
                             if ($config['keepescape']['value'] -eq 1) {
                                 @{
-                                    description = 'Clear backslash escape symbols'
+                                    description = "Clear all '\' characters"
                                     replacements = @(
                                         @{
                                             searchRegex = [regex]::Escape('\')
                                             replacement = ''
+                                        }
+                                    )
+                                }
+                            }
+                            elseif ($config['keepescape']['value'] -eq 2) {
+                                @{
+                                    description = "Clear all '\' characters except those preceding alphanumeric characters"
+                                    replacements = @(
+                                        @{
+                                            searchRegex = '\\([^A-Za-z0-9])'
+                                            replacement = '$1'
                                         }
                                     )
                                 }
