@@ -394,16 +394,28 @@ Function Encode-Markdown {
     param (
         [Parameter(Mandatory = $true,Position = 0,ValueFromPipeline = $true,ValueFromPipelineByPropertyName = $true)]
         [AllowEmptyString()]
-        [string]$Name
+        [string]
+        $Name
+    ,
+        [Parameter()]
+        [switch]
+        $Uri
     )
 
-    $markdownChars = '\*_{}[]()#+-.!'.ToCharArray()
-    foreach ($c in $markdownChars) {
-        $Name = $Name.Replace("$c", "\$c")
-    }
-    $markdownChars2 = '`'
-    foreach ($c in $markdownChars2) {
-        $Name = $Name.Replace("$c", "$c$c$c")
+    if ($Uri) {
+        $markdownChars = '[]()'.ToCharArray()
+        foreach ($c in $markdownChars) {
+            $Name = $Name.Replace("$c", "\$c")
+        }
+    }else {
+        $markdownChars = '\*_{}[]()#+-.!'.ToCharArray()
+        foreach ($c in $markdownChars) {
+            $Name = $Name.Replace("$c", "\$c")
+        }
+        $markdownChars2 = '`'
+        foreach ($c in $markdownChars2) {
+            $Name = $Name.Replace("$c", "$c$c$c")
+        }
     }
     $Name
 }
@@ -751,7 +763,7 @@ Function New-SectionGroupConversionConfig {
                                             $attachmentCfg = [ordered]@{}
                                             $attachmentCfg['object'] =  $i
                                             $attachmentCfg['nameCompat'] =  $i.preferredName | Remove-InvalidFileNameCharsInsertedFiles
-                                            $attachmentCfg['markdownFileName'] =  $attachmentCfg['nameCompat'] | Encode-Markdown
+                                            $attachmentCfg['markdownFileName'] =  $attachmentCfg['nameCompat'] | Encode-Markdown -Uri
                                             $attachmentCfg['source'] =  $i.pathCache
                                             $attachmentCfg['destination'] =  [io.path]::combine( $pageCfg['mediaPath'], $attachmentCfg['nameCompat'] )
 
