@@ -133,7 +133,7 @@ Whether to include page timestamp and separator at top of document
         }
         keepspaces = @{
             description = @'
-Whether to clear double spaces between bullets
+Whether to clear double spaces between bullets, non-breaking spaces from blank lines, and '>` after bullet lists
 1: Clear double spaces in bullets - Default
 2: Keep double spaces
 '@
@@ -828,10 +828,10 @@ Function New-SectionGroupConversionConfig {
                                             searchRegex = '\r*\n\r*\n- '
                                             replacement = "`n- "
                                         }
-                                        # Removes isolated '>' instances with nothing to its right
+                                        # Remove all '>' occurrences immediately following bullet lists
                                         @{
-                                            searchRegex = '\r*\n\r*\n>\s*\n'
-                                            replacement = "`n`n"
+                                            searchRegex = '\n>[ ]*'
+                                            replacement = "`n"
                                         }
                                     )
                                 }
