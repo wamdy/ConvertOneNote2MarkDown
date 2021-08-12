@@ -822,9 +822,15 @@ Function New-SectionGroupConversionConfig {
                                             searchRegex = [regex]::Escape([char]0x00A0)
                                             replacement = ''
                                         }
+                                        # Remove a newline between each occurrence of '- some list item'
                                         @{
                                             searchRegex = '\r*\n\r*\n- '
                                             replacement = "`n- "
+                                        }
+                                        # Removes isolated '>' instances with nothing to its right
+                                        @{
+                                            searchRegex = '\r*\n\r*\n>\s*\n'
+                                            replacement = "`n`n"
                                         }
                                     )
                                 }
