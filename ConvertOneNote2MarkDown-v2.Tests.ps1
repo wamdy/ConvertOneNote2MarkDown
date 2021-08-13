@@ -249,24 +249,6 @@ Describe "Remove-InvalidFileNameChars" -Tag 'Unit' {
             $result | Should -Be $expectedFileName
         }
 
-        It "Should trim down final string to 130 dharacters if it is beyond 150 characters" {
-            $fileName = 'a' * 151
-            $expectedFileName = 'a' * 130
-
-            $result = Remove-InvalidFileNameChars -Name $fileName -KeepPathSpaces
-
-            $result | Should -Be $expectedFileName
-        }
-
-        It "Should not trim down final string to 130 characters if it is within 150 characters" {
-            $fileName = 'a' * 150
-            $expectedFileName = 'a' * 150
-
-            $result = Remove-InvalidFileNameChars -Name $fileName -KeepPathSpaces
-
-            $result | Should -Be $expectedFileName
-        }
-
         It "Should trim boundary whitespaces" {
             $fileName = ' foobar '
             $expectedFileName = 'foobar'
@@ -274,6 +256,57 @@ Describe "Remove-InvalidFileNameChars" -Tag 'Unit' {
             $result = Remove-InvalidFileNameChars -Name $fileName -KeepPathSpaces
 
             $result | Should -Be $expectedFileName
+        }
+
+    }
+
+}
+
+Describe "Truncate-PathFileName" -Tag 'Unit' {
+
+    Context 'Parameters' {
+
+        It "Accept pipeline input" {
+            $path = 'foo'
+
+            { $path | Truncate-PathFileName } | Should -Not -Throw
+        }
+
+        It "Throw if -Length is greater than 255" {
+            $drive = "C:$( [io.path]::DirectorySeparatorChar )" # E.g. C:\
+            $path = $drive  + ("a" * 100)
+            $length = 500
+
+            { $path | Truncate-PathFileName -Length $length } | Should -Throw 'greater than the maximum allowed range of 255'
+        }
+
+    }
+
+    Context 'Behavior' {
+
+        It "Should not truncate a given path's filename to 255 characters if given string is within the limit" {
+            $drive = "C:$( [io.path]::DirectorySeparatorChar )" # E.g. C:\
+            $path = $drive + ("a" * 100) # E.g. C:\aaaaa....
+            $expectedPath = $drive  + ("a" * 100) # E.g. C:\aaaaa....
+
+            $path | Truncate-PathFileName | Should -Be $expectedPath
+        }
+
+        It "Should truncate a given path's filename to 255 characters by default" {
+            $drive = "C:$( [io.path]::DirectorySeparatorChar )" # E.g. C:\
+            $path = $drive  + ("a" * 1000)
+            $expectedPath = $drive  + ("a" * 255)
+
+            $path | Truncate-PathFileName | Should -Be $expectedPath
+        }
+
+        It "Should truncate a given path's filename to a specified -Length" {
+            $drive = "C:$( [io.path]::DirectorySeparatorChar )" # E.g. C:\
+            $path = $drive  + ("a" * 1000)
+            $length = 123
+            $expectedPath = $drive  + ("a" * 123)
+
+            $path | Truncate-PathFileName -Length $length | Should -Be $expectedPath
         }
 
     }
@@ -748,6 +781,55 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             }
         }
 
+        It "Should determine file and folder paths correctly" {
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 15 pages from 'test' notebook, 15 pages from 'test2' notebook
+            $result.Count | Should -Be 30
+
+            foreach ($pageCfg in $result) {
+                $pageCfg['fileName'] | Should -Match "$( [regex]::Escape($pageCfg['fileExtension']) )$"
+                $pageCfg['filePathNormal'] | Should -Match  "$( [regex]::Escape($pageCfg['fileName']) )$"
+                $pageCfg['filePathLong'] | Should -Match "$( [regex]::Escape($pageCfg['fileName']) )$"
+                $pageCfg['filePath'] | Should -Match "$( [regex]::Escape($pageCfg['fileName']) )$"
+            }
+        }
+
+        It "Should normalize the final .md file and its parent folder names to a maximum of 255 characters" {
+            # 5 notes, each with very long names
+            $fakeHierarchy = @'
+<?xml version="1.0"?>
+<one:Notebooks xmlns:one="http://schemas.microsoft.co1m/office/onenote/2013/onenote">
+    <one:Notebook name="test" nickname="test" ID="{38E47DAB-211E-4EC1-85F1-129656A9D2CE}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/" lastModifiedTime="2021-08-06T16:27:58.000Z" color="#ADE792">
+        <one:Section name="s0" ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/s0.one" lastModifiedTime="2021-08-06T16:08:25.000Z" color="#8AA8E4">
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19461971475288592555920101886406896686096991}" name="Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T16:08:25.000Z" pageLevel="1" />
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19542261697052950701320178013485171541838441}" name="Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name" dateTime="2021-08-06T15:36:14.000Z" lastModifiedTime="2021-08-06T15:38:01.000Z" pageLevel="2" />
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19535140647270019211520151454305551340000401}" name="Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name" dateTime="2021-08-06T15:38:03.000Z" lastModifiedTime="2021-08-06T15:46:36.000Z" pageLevel="3" />
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19542261697052950701320178013485171541838442}" name="Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name" dateTime="2021-08-06T15:36:14.000Z" lastModifiedTime="2021-08-06T15:38:01.000Z" pageLevel="2" />
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19461971475288592555920101886406896686096992}" name="Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T16:08:25.000Z" pageLevel="1" />
+        </one:Section>
+    </one:Notebook>
+</one:Notebooks>
+'@ -as [xml]
+            $params['SectionGroups'] = $fakeHierarchy.Notebooks.Notebook
+
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 5 pages from 'test' notebook
+            $result.Count | Should -Be 5
+
+            foreach ($pageCfg in $result) {
+                # The names of this `.md` file and all of its parent folders should be no longer than 255 characters
+                $pageCfg['fileName'].Length | Should -Be 255
+
+                $split = $pageCfg['filePath'].Split([io.path]::DirectorySeparatorChar)
+                foreach ($s in $split) {
+                    $s.Length | Should -BeLessOrEqual 255
+                }
+            }
+
+        }
+
         It "Should determine attachment references correctly" {
             $result = @( New-SectionGroupConversionConfig @params 6>$null )
 
@@ -832,8 +914,8 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             $pageCfg = $result[0]
             $regex = "^$( [regex]::Escape($params['Config']['notesdestpath']['value']) )"
             $regexTmp = "^$( [regex]::Escape($pageCfg['tmpPath']) )"
-            $pageCfg['fullexportdirpath'] | Should -Match $regex
-            $pageCfg['fullfilepathwithoutextension'] | Should -Match $regex
+            $pageCfg['fileDirectory'] | Should -Match $regex
+            $pageCfg['filePathNormal'] | Should -Match $regex
             $pageCfg['mediaParentPath'] | Should -Match $regex
             $pageCfg['mediaPath'] | Should -Match $regex
             $pageCfg['mediaParentPathPandoc'] | Should -Be $pageCfg['tmpPath'].Replace([io.path]::DirectorySeparatorChar, '/')
@@ -866,28 +948,28 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
                 $pageCfg5 = $result[$i + 4] # First level page preceded by a second level page
 
                 # Test the first level page
-                Split-Path $pageCfg1['fullfilepathwithoutextension'] -Leaf | Should -Be  $pageCfg1['nameCompat']
-                Split-Path $pageCfg1['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg1['fullexportdirpath']
+                Split-Path $pageCfg1['filePathNormal'] -Leaf | Should -Be  $pageCfg1['fileName']
+                Split-Path $pageCfg1['filePathNormal'] -Parent | Should -Be $pageCfg1['fileDirectory']
                 $pageCfg1['levelsPrefix']| Should -Be "$( '../' * ($pageCfg1['levelsFromRoot'] + $pageCfg1['pageLevel'] - 1) )"
 
                 # Test the second level page preceded by a first level page
-                Split-Path $pageCfg2['fullfilepathwithoutextension'] -Leaf | Should -Be  $pageCfg2['nameCompat']
-                Split-Path $pageCfg2['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg2['fullexportdirpath']
+                Split-Path $pageCfg2['filePathNormal'] -Leaf | Should -Be  $pageCfg2['fileName']
+                Split-Path $pageCfg2['filePathNormal'] -Parent | Should -Be $pageCfg2['fileDirectory']
                 $pageCfg2['levelsPrefix']| Should -Be "$( '../' * ($pageCfg2['levelsFromRoot'] + $pageCfg2['pageLevel'] - 1) )"
 
                 # Test the third level page preceded by a second level page
-                Split-Path $pageCfg3['fullfilepathwithoutextension'] -Leaf | Should -Be  $pageCfg3['nameCompat']
-                Split-Path $pageCfg3['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg3['fullexportdirpath']
+                Split-Path $pageCfg3['filePathNormal'] -Leaf | Should -Be  $pageCfg3['fileName']
+                Split-Path $pageCfg3['filePathNormal'] -Parent | Should -Be $pageCfg3['fileDirectory']
                 $pageCfg3['levelsPrefix']| Should -Be "$( '../' * ($pageCfg3['levelsFromRoot'] + $pageCfg3['pageLevel'] - 1) )"
 
                 # Test the second level page preceded by a third level page
-                Split-Path $pageCfg4['fullfilepathwithoutextension'] -Leaf | Should -Be $pageCfg4['nameCompat']
-                Split-Path $pageCfg4['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg4['fullexportdirpath']
+                Split-Path $pageCfg4['filePathNormal'] -Leaf | Should -Be $pageCfg4['fileName']
+                Split-Path $pageCfg4['filePathNormal'] -Parent | Should -Be $pageCfg4['fileDirectory']
                 $pageCfg4['levelsPrefix']| Should -Be "$( '../' * ($pageCfg4['levelsFromRoot'] + $pageCfg4['pageLevel'] - 1) )"
 
                 # Test the first level page preceded by a second level page
-                Split-Path $pageCfg5['fullfilepathwithoutextension'] -Leaf | Should -Be $pageCfg5['nameCompat']
-                Split-Path $pageCfg5['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg5['fullexportdirpath']
+                Split-Path $pageCfg5['filePathNormal'] -Leaf | Should -Be $pageCfg5['fileName']
+                Split-Path $pageCfg5['filePathNormal'] -Parent | Should -Be $pageCfg5['fileDirectory']
                 $pageCfg5['levelsPrefix']| Should -Be "$( '../' * ($pageCfg5['levelsFromRoot'] + $pageCfg5['pageLevel'] - 1) )"
             }
 
@@ -906,33 +988,33 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
                 $pageCfg5 = $result[$i + 4] # First level page preceded by a second level page
 
                 # Test the first level page
+                Split-Path $pageCfg1['filePathNormal'] -Parent | Should -Be $pageCfg1['fileDirectory']
                 $pageCfg1['filePathRelUnderscore'] | Should -Be "$( $pageCfg1['nameCompat'] )"
-                Split-Path $pageCfg1['fullfilepathwithoutextension'] -Leaf | Should -Be  "$( $pageCfg1['nameCompat'] )"
-                Split-Path $pageCfg1['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg1['fullexportdirpath']
+                Split-Path $pageCfg1['filePathNormal'] -Leaf | Should -Be "$( $pageCfg1['filePathRelUnderscore'] ).md"
                 $pageCfg1['levelsPrefix']| Should -Be "$( '../' * ($pageCfg1['levelsFromRoot'] + 1 - 1) )"
 
                 # Test the second level page preceded by a first level page
+                Split-Path $pageCfg2['filePathNormal'] -Parent | Should -Be $pageCfg2['fileDirectory']
                 $pageCfg2['filePathRelUnderscore'] | Should -Be "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )"
-                Split-Path $pageCfg2['fullfilepathwithoutextension'] -Leaf | Should -Be  "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )"
-                Split-Path $pageCfg2['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg2['fullexportdirpath']
+                Split-Path $pageCfg2['filePathNormal'] -Leaf | Should -Be "$( $pageCfg2['filePathRelUnderscore'] ).md"
                 $pageCfg2['levelsPrefix']| Should -Be "$( '../' * ($pageCfg2['levelsFromRoot'] + 1 - 1) )"
 
                 # Test the third level page preceded by a second level page
+                Split-Path $pageCfg3['filePathNormal'] -Parent | Should -Be $pageCfg3['fileDirectory']
                 $pageCfg3['filePathRelUnderscore'] | Should -Be "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )_$( $pageCfg3['nameCompat'] )"
-                Split-Path $pageCfg3['fullfilepathwithoutextension'] -Leaf | Should -Be  "$( $pageCfg1['nameCompat'] )_$( $pageCfg2['nameCompat'] )_$( $pageCfg3['nameCompat'] )"
-                Split-Path $pageCfg3['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg3['fullexportdirpath']
+                Split-Path $pageCfg3['filePathNormal'] -Leaf | Should -Be "$( $pageCfg3['filePathRelUnderscore'] ).md"
                 $pageCfg3['levelsPrefix']| Should -Be "$( '../' * ($pageCfg3['levelsFromRoot'] + 1 - 1) )"
 
                 # Test the second level page preceded by a third level page
+                Split-Path $pageCfg4['filePathNormal'] -Parent | Should -Be $pageCfg4['fileDirectory']
                 $pageCfg4['filePathRelUnderscore'] | Should -Be "$( $pageCfg1['nameCompat'] )_$( $pageCfg4['nameCompat'] )"
-                Split-Path $pageCfg4['fullfilepathwithoutextension'] -Leaf | Should -Be  "$( $pageCfg1['nameCompat'] )_$( $pageCfg4['nameCompat'] )"
-                Split-Path $pageCfg4['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg4['fullexportdirpath']
+                Split-Path $pageCfg4['filePathNormal'] -Leaf | Should -Be "$( $pageCfg4['filePathRelUnderscore'] ).md"
                 $pageCfg4['levelsPrefix']| Should -Be "$( '../' * ($pageCfg4['levelsFromRoot'] + 1 - 1) )"
 
                 # Test the first level page preceded by a second level page
+                Split-Path $pageCfg5['filePathNormal'] -Parent | Should -Be $pageCfg5['fileDirectory']
                 $pageCfg5['filePathRelUnderscore'] | Should -Be "$( $pageCfg5['nameCompat'] )"
-                Split-Path $pageCfg5['fullfilepathwithoutextension'] -Leaf | Should -Be  "$( $pageCfg5['nameCompat'] )"
-                Split-Path $pageCfg5['fullfilepathwithoutextension'] -Parent | Should -Be $pageCfg5['fullexportdirpath']
+                Split-Path $pageCfg5['filePathNormal'] -Leaf | Should -Be "$( $pageCfg5['filePathRelUnderscore'] ).md"
                 $pageCfg5['levelsPrefix']| Should -Be "$( '../' * ($pageCfg5['levelsFromRoot'] + 1 - 1) )"
             }
         }
@@ -981,7 +1063,7 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             $result.Count | Should -Be 30
 
             foreach ($pageCfg in $result) {
-                $pageCfg['mediaParentPath'] | Should -Be $pageCfg['fullexportdirpath']
+                $pageCfg['mediaParentPath'] | Should -Be $pageCfg['fileDirectory']
             }
         }
 
