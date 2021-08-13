@@ -336,6 +336,48 @@ Function Print-Configuration {
     }
 }
 
+Function Truncate-PathFileName {
+    [CmdletBinding(DefaultParameterSetName='default')]
+    param (
+        [Parameter(ParameterSetName='default',Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $Path
+    ,
+        [Parameter(ParameterSetName='pipeline',ValueFromPipeline)]
+        [string]
+        $InputObject
+    ,
+        [Parameter()]
+        [ValidateRange(0,255)]
+        [int]
+        $Length
+    )
+
+    process {
+        if ($InputObject) {
+            $Path = $InputObject
+        }
+        if ($null -eq $Path) {
+            throw "No input parameters specified."
+        }
+        $maxLength = 255
+        if ($Length) {
+            $maxLength = $Length
+        }
+
+        # On Windows, even with support for long absolute file paths, there's still a limit for file or folder names (i.e. File or folder name limit: Max 255 characters long)
+        $name = Split-Path $Path -Leaf
+        if ($name.Length -gt $maxLength) {
+            $parent = Split-Path $Path -Parent
+            $truncatedName = $name.Substring(0, $maxLength)
+            [io.path]::combine( $parent, $truncatedName )
+        }else {
+            $Path
+        }
+    }
+}
+
 Function Remove-InvalidFileNameChars {
     [CmdletBinding()]
     param (
@@ -357,7 +399,6 @@ Function Remove-InvalidFileNameChars {
                 } else {
                     $newName -replace "\s", "-"
                 }
-    $newName = $newName.Substring(0, $(@{$true = 130; $false = $newName.length }[$newName.length -gt 150]))
     return $newName
 }
 
@@ -600,7 +641,7 @@ Function New-SectionGroupConversionConfig {
         $cfg['nameCompat'] = $sectionGroup.name | Remove-InvalidFileNameChars
         $cfg['levelsFromRoot'] = $LevelsFromRoot
         $cfg['uri'] = $sectionGroup.path # E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup
-        $cfg['notesDirectory'] = [io.path]::combine( $NotesDestination.TrimEnd('/').TrimEnd('\').Replace('\', [io.path]::DirectorySeparatorChar), $cfg['nameCompat'] )
+        $cfg['notesDirectory'] = [io.path]::combine( $NotesDestination.TrimEnd('/').TrimEnd('\').Replace('\', [io.path]::DirectorySeparatorChar), $cfg['nameCompat'] ) # No need to truncate. Section Group and Section names have a max length of 50, so we should never hit the absolute path, file name, or directory name limits on Windows
         $cfg['notesBaseDirectory'] = & {
             # E.g. 'c:\temp\notes\mynotebook\mysectiongroup'
             # E.g. levelsFromRoot: 1
@@ -638,7 +679,7 @@ Function New-SectionGroupConversionConfig {
                 $sectionCfg['id'] = $section.ID # E.g {BE566C4F-73DC-43BD-AE7A-1954F8B22C2A}{1}{B0}
                 $sectionCfg['nameCompat'] = $section.name | Remove-InvalidFileNameChars
                 $sectionCfg['levelsFromRoot'] = $cfg['levelsFromRoot'] + 1
-                $sectionCfg['pathFromRoot'] = "$( $cfg['pathFromRoot'] )$( [io.path]::DirectorySeparatorChar )$( $sectionCfg['nameCompat'] )".Trim([io.path]::DirectorySeparatorChar)
+                $sectionCfg['pathFromRoot'] = "$( $cfg['pathFromRoot'] )$( [io.path]::DirectorySeparatorChar )$( $sectionCfg['nameCompat'] )".Trim([io.path]::DirectorySeparatorChar) # No need to truncate. Section Group and Section names have a max length of 50, so we should never hit the absolute path, file name, or directory name limits on Windows
                 $sectionCfg['pathFromRootCompat'] = $sectionCfg['pathFromRoot'] | Remove-InvalidFileNameChars
                 $sectionCfg['uri'] = $section.path # E.g. https://d.docs.live.net/0123456789abcdef/Skydrive Notebooks/mynotebook/mysectiongroup/mysection
                 $sectionCfg['lastModifiedTime'] = [Datetime]::ParseExact($section.lastModifiedTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
@@ -682,6 +723,7 @@ Function New-SectionGroupConversionConfig {
                             default { 'markdown' }
                         }
                         $pageCfg['pagePrefix'] = & {
+                            # 9 differences cases.
                             if ($pageCfg['pageLevel'] -eq 1) {
                                 # 1 -> 1, 2 -> 1, or 3 -> 1
                                 ''
@@ -698,10 +740,23 @@ Function New-SectionGroupConversionConfig {
                                         "$( Split-Path (Split-Path $previousPage['filePathRel'] -Parent) -Parent )$( [io.path]::DirectorySeparatorChar )"
                                     }
                                 }else {
-                                    ''
+                                    '' # Should never end up here
                                 }
                             }
                         }
+                        # Win32 path limits. E.g. 'C:\path\to\file' or 'C:\path\to\folder'
+                        #   Absolute path:
+                        #   - Win32: Max 259 characters for files, Max 247 characters for directories.
+                        #   File or directory name:
+                        #   - Max 255 characters long for file or folder names
+                        # Non-Win32 path limits. E.g. '\\?\C:\path\to\file' or '\\?\C:\path\to\folder'. Prefixing with '\\?\' allows Windows Powershell <= 5 (based on Win32) to support long absolute paths.
+                        #   Absolute path:
+                        #   - N.A.
+                        #   File or directory name:
+                        #   - Max 255 characters long for file or folder names
+                        # See: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN#maxpath
+
+                        # Normalize the final .md file path. Page names can be very long, and can exceed the max absolute path length, or max file or folder name on a Windows system.
                         $pageCfg['filePathRel'] = & {
                             $filePathRel = "$( $pageCfg['pagePrefix'] )$( $pageCfg['nameCompat'] )"
 
@@ -715,16 +770,27 @@ Function New-SectionGroupConversionConfig {
                             if ($recurrence -gt 0) {
                                 $filePathRel = "$filePathRel-$recurrence"
                             }
-                            $filePathRel
+                            $filePathRel | Truncate-PathFileName  # Truncate so we don't hit the file name limit
                         }
                         $pageCfg['filePathRelUnderscore'] = $pageCfg['filePathRel'].Replace( [io.path]::DirectorySeparatorChar, '_' )
-                        $pageCfg['fullfilepathwithoutextension'] = if ($config['prefixFolders']['value'] -eq 2) {
-                            [io.path]::combine( $cfg['notesDirectory'], $sectionCfg['nameCompat'], $pageCfg['filePathRelUnderscore'] )
-                        }else {
-                            [io.path]::combine( $cfg['notesDirectory'], $sectionCfg['nameCompat'], $pageCfg['filePathRel'] )
+                        $pageCfg['filePathNormal'] = & {
+                            $pathWithoutExtension = if ($config['prefixFolders']['value'] -eq 2) {
+                                [io.path]::combine( $cfg['notesDirectory'], $sectionCfg['nameCompat'], "$( $pageCfg['filePathRelUnderscore'] )" )
+                            }else {
+                                [io.path]::combine( $cfg['notesDirectory'], $sectionCfg['nameCompat'], "$( $pageCfg['filePathRel'] )" )
+                            }
+                            "$( $pathWithoutExtension | Truncate-PathFileName -Length 252 ).md" # Truncate to 255 characters so we don't hit the file name limit
                         }
-                        $pageCfg['fullexportdirpath'] = Split-Path $pageCfg['fullfilepathwithoutextension'] -Parent
-                        $pageCfg['mdFileName'] = Split-Path $pageCfg['fullfilepathwithoutextension'] -Leaf
+                        $pageCfg['filePathLong'] = "\\?\$( $pageCfg['filePathNormal'] )" # A non-Win32 path. Prefixing with '\\?\' allows Windows Powershell <= 5 (based on Win32) to support long absolute paths.
+                        $pageCfg['filePath'] = if ($PSVersionTable.PSVersion.Major -le 5) {
+                            $pageCfg['filePathLong'] # Add support for long paths on Powershell 5
+                        }else {
+                            $pageCfg['filePathNormal'] # Powershell Core supports long file paths
+                        }
+                        $pageCfg['fileDirectory'] = Split-Path $pageCfg['filePathNormal'] -Parent
+                        $pageCfg['fileName'] = Split-Path $pageCfg['filePathNormal'] -Leaf
+                        $pageCfg['fileExtension'] = if ($pageCfg['filePathNormal'] -match '(\.[^.]+)$') { $matches[1] } else { '' }
+                        $pageCfg['fileBaseName'] = $pageCfg['fileName'] -replace "$( [regex]::Escape($pageCfg['fileExtension']) )$", ''
                         $pageCfg['levelsPrefix'] = if ($config['medialocation']['value'] -eq 2) {
                             ''
                         }else {
@@ -743,7 +809,7 @@ Function New-SectionGroupConversionConfig {
                             }
                         }
                         $pageCfg['mediaParentPath'] = if ($config['medialocation']['value'] -eq 2) {
-                            $pageCfg['fullexportdirpath']
+                            $pageCfg['fileDirectory']
                         }else {
                             $cfg['notesBaseDirectory']
                         }
@@ -886,12 +952,12 @@ Function New-SectionGroupConversionConfig {
                             }
                         )
                         $pageCfg['directoriesToCreate'] = @(
-                            # The directories to be created
+                            # The directories to be created. These directories should never hit the absolute path, file name, or directory name limits on Windows
                             @(
                                 $cfg['notesDocxDirectory']
                                 $cfg['notesDirectory']
                                 $pageCfg['tmpPath']
-                                $pageCfg['fullexportdirpath']
+                                $pageCfg['fileDirectory']
                                 $pageCfg['mediaPath']
                             ) | Select-Object -Unique
                         )
@@ -1027,16 +1093,16 @@ Function Convert-OneNotePage {
             $stderrFile = "$( $pageCfg['tmpPath'] )/pandoc-stderr.txt"
             try {
                 # Start-Process has no way of capturing stderr / stdterr to variables, so we need to use temp files.
-                "Converting docx file to markdown file: $( $pageCfg['fullfilepathwithoutextension'] ).md" | Write-Verbose
+                "Converting docx file to markdown file: $( $pageCfg['filePath'] )" | Write-Verbose
                 if ($config['dryRun']['value'] -eq 1) {
-                    $process = Start-Process -ErrorAction Stop -RedirectStandardError $stderrFile -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList @( '-f', 'docx', '-t', "$( $pageCfg['converter'] )-simple_tables-multiline_tables-grid_tables+pipe_tables", '-i', $pageCfg['fullexportpath'], '-o', "$( $pageCfg['fullfilepathwithoutextension'] ).md", '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" ) *>&1  # extracts into ./media of the supplied folder
+                    $process = Start-Process -ErrorAction Stop -RedirectStandardError $stderrFile -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList @( '-f', 'docx', '-t', "$( $pageCfg['converter'] )-simple_tables-multiline_tables-grid_tables+pipe_tables", '-i', $pageCfg['fullexportpath'], '-o', $pageCfg['filePathNormal'], '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" ) *>&1  # extracts into ./media of the supplied folder
                     if ($process.ExitCode -ne 0) {
                         $stderr = Get-Content $stderrFile -Raw
                         throw "pandoc failed to convert: $stderr"
                     }
                 }
             }catch {
-                throw "Error while converting docx file $( $pageCfg['fullexportpath'] ) to markdown file $( $pageCfg['fullfilepathwithoutextension'] ).md: $( $_.Exception.Message )"
+                throw "Error while converting docx file $( $pageCfg['fullexportpath'] ) to markdown file $( $pageCfg['filePathNormal'] ): $( $_.Exception.Message )"
             }finally {
                 if (Test-Path $stderrFile) {
                     Remove-Item $stderrFile -Force
@@ -1092,9 +1158,9 @@ Function Convert-OneNotePage {
                     try {
                         "Mutation of markdown: Rename image references to unique name. Find '$( $image.Name )', Replacement: '$( $newimageName )'" | Write-Verbose
                         if ($config['dryRun']['value'] -eq 1) {
-                            $content = Get-Content -LiteralPath "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Raw -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
+                            $content = Get-Content -LiteralPath $pageCfg['filePath'] -Raw -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                             $content = $content.Replace("$($image.Name)", "$($newimageName)")
-                            Set-ContentNoBom -LiteralPath "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
+                            Set-ContentNoBom -LiteralPath $pageCfg['filePath'] -Value $content -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                         }
                     }catch {
                         Write-Error "Error while renaming image file name references to '$( $newimageName ): $( $_.Exception.Message )"
@@ -1106,7 +1172,7 @@ Function Convert-OneNotePage {
             try {
                 if ($config['dryRun']['value'] -eq 1) {
                     # Get markdown content
-                    $content = @( Get-Content -LiteralPath "$( $pageCfg['fullfilepathwithoutextension'] ).md" -ErrorAction Stop ) # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
+                    $content = @( Get-Content -LiteralPath $pageCfg['filePath'] -ErrorAction Stop ) # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                     $content = @(
                         if ($content.Count -gt 6) {
                             # Discard first 6 lines which contain a header, created date, and time. We are going to add our own header
@@ -1132,13 +1198,13 @@ Function Convert-OneNotePage {
                     }
                 }
                 if ($config['dryRun']['value'] -eq 1) {
-                    Set-ContentNoBom -LiteralPath "$( $pageCfg['fullfilepathwithoutextension'] ).md" -Value $content -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
+                    Set-ContentNoBom -LiteralPath $pageCfg['filePath'] -Value $content -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                 }
             }catch {
                 Write-Error "Error while mutating markdown content: $( $_.Exception.Message )"
             }
 
-            "Markdown file ready: $( $pageCfg['fullfilepathwithoutextension'] ).md" | Write-Host -ForegroundColor Green
+            "Markdown file ready: $( $pageCfg['filePathNormal'] )" | Write-Host -ForegroundColor Green
         }catch {
             Write-Host "Failed to convert page: $( $pageCfg['pathFromRoot'] ). Reason: $( $_.Exception.Message )" -ForegroundColor Red
             Write-Error "Failed to convert page: $( $pageCfg['pathFromRoot'] ). Reason: $( $_.Exception.Message )"
