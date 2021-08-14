@@ -112,12 +112,12 @@ Describe "Validate-Configuration" -Tag 'Unit' {
             $config = Get-DefaultConfiguration
             $config['notesdestpath'] = $null
 
-            { $config | Validate-Configuration } | Should -Throw 'Missing configuration option'
+            { $config | Validate-Configuration } | Should -Throw 'Missing or invalid configuration option'
 
             $config = Get-DefaultConfiguration
             $config['notesdestpath']['value'] = $null
 
-            { $config | Validate-Configuration } | Should -Throw 'Missing configuration option'
+            { $config | Validate-Configuration } | Should -Throw 'Missing or invalid configuration option'
         }
 
         It "Throws on invalid config option type" {
