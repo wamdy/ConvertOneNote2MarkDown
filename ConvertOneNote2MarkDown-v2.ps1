@@ -109,17 +109,19 @@ Whether to store media in single or multiple folders
         }
         conversion = @{
             description = @'
-Specify conversion type
-1: markdown (Pandoc) - Default
-2: commonmark (CommonMark Markdown)
-3: gfm (GitHub-Flavored Markdown)
-4: markdown_mmd (MultiMarkdown)
-5: markdown_phpextra (PHP Markdown Extra)
-6: markdown_strict (original unextended Markdown)
+Specify Pandoc output format and optional extensions in the format: <format><+extension><-extension>. See: https://pandoc.org/MANUAL.html#options
+Examples:
+  markdown-simple_tables-multiline_tables-grid_tables+pipe_tables
+  commonmark+pipe_tables
+  gfm+pipe_tables
+  markdown_mmd-simple_tables-multiline_tables-grid_tables+pipe_tables
+  markdown_phpextra-simple_tables-multiline_tables-grid_tables+pipe_tables
+  markdown_strict+simple_tables-multiline_tables-grid_tables+pipe_tables
+Default:
+  markdown-simple_tables-multiline_tables-grid_tables+pipe_tables
 '@
-            default = 1
-            value = 1
-            validateRange = 1,6
+            default = 'markdown-simple_tables-multiline_tables-grid_tables+pipe_tables'
+            value = 'markdown-simple_tables-multiline_tables-grid_tables+pipe_tables'
         }
         headerTimestampEnabled = @{
             description = @'
@@ -143,7 +145,7 @@ Whether to clear double spaces between bullets, non-breaking spaces from blank l
         }
         keepescape = @{
             description = @'
-Whether to clear escape symbols from md files
+Whether to clear escape symbols from md files. See: https://pandoc.org/MANUAL.html#backslash-escapes
 1: Clear all '\' characters  - Default
 2: Clear all '\' characters except those preceding alphanumeric characters
 3: Keep '\' symbol escape
@@ -455,6 +457,7 @@ Function Encode-Markdown {
             $Name = $Name.Replace("$c", "\$c")
         }
     }else {
+        # See: https://pandoc.org/MANUAL.html#backslash-escapes
         $markdownChars = '\*_{}[]()#+-.!'.ToCharArray()
         foreach ($c in $markdownChars) {
             $Name = $Name.Replace("$c", "\$c")
@@ -718,15 +721,7 @@ Function New-SectionGroupConversionConfig {
                         $pageCfg['lastModifiedTime'] = [Datetime]::ParseExact($page.lastModifiedTime, 'yyyy-MM-ddTHH:mm:ss.fffZ', $null)
                         $pageCfg['lastModifiedTimeEpoch'] = [int][double]::Parse((Get-Date ((Get-Date $pageCfg['lastModifiedTime']).ToUniversalTime()) -UFormat %s)) # Epoch
                         $pageCfg['pageLevel'] = $page.pageLevel -as [int]
-                        $pageCfg['converter'] = switch ($config['conversion']['value']) {
-                            1 { 'markdown' }
-                            2 { 'commonmark' }
-                            3 { 'gfm' }
-                            4 { 'markdown_mmd' }
-                            5 { 'markdown_phpextra' }
-                            6 { 'markdown_strict' }
-                            default { 'markdown' }
-                        }
+                        $pageCfg['conversion'] = $config['conversion']['value']
                         $pageCfg['pagePrefix'] = & {
                             # 9 differences cases.
                             if ($pageCfg['pageLevel'] -eq 1) {
@@ -1100,7 +1095,7 @@ Function Convert-OneNotePage {
                 # Start-Process has no way of capturing stderr / stdterr to variables, so we need to use temp files.
                 "Converting docx file to markdown file: $( $pageCfg['filePath'] )" | Write-Verbose
                 if ($config['dryRun']['value'] -eq 1) {
-                    $argumentList = @( '-f', 'docx', '-t', "$( $pageCfg['converter'] )-simple_tables-multiline_tables-grid_tables+pipe_tables", '-i', $pageCfg['fullexportpath'], '-o', $pageCfg['filePathNormal'], '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" )
+                    $argumentList = @( '-f', 'docx', '-t', $pageCfg['conversion'], '-i', $pageCfg['fullexportpath'], '-o', $pageCfg['filePathNormal'], '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" )
                     "Command line: pandoc.exe $argumentList" | Write-Verbose
                     $process = Start-Process -ErrorAction Stop -RedirectStandardError $stderrFile -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList $argumentList # extracts into ./media of the supplied folder
                     if ($process.ExitCode -ne 0) {

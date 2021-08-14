@@ -35,7 +35,7 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
 * Allows to choose between **discarding or keeping intermediate Word files**. Intermediate Word files are stored in a central notebook folder.
 * Allows to choose between converting from existing `.docx` (90% faster) and creating new ones - useful if just want to test differences in the various processing options without generating new `.docx`each time
 * Allows to choose between naming `.docx` files using page ID and last modified epoch date e.g. `{somelongid}-1234567890.docx` or hierarchy e.g. `<sectiongroup>-<section>-<page>.docx`
-* Allows to **select which markdown format will be used**, defaulting to Pandoc's standard format, which strips any HTML from tables along with other desirable (for me) formatting choices. See more details on these options here: https://pandoc.org/MANUAL.html#options
+* Allows to **specify Pandoc output format and any optional extensions**, defaulting to Pandoc Markdown format which strips most HTML from tables and using pipe tables. See more details on these options here: https://pandoc.org/MANUAL.html#options
    * markdown (Pandoc’s Markdown)
    * commonmark (CommonMark Markdown)
    * gfm (GitHub-Flavored Markdown), or the deprecated and less accurate markdown_github; use markdown_github only if you need extensions not supported in gfm.

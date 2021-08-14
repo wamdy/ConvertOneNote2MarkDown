@@ -44,14 +44,17 @@ $prefixFolders = 1
 # 2: Separate 'media' folder for each folder in the hierarchy
 $medialocation = 1
 
-# Specify conversion type
-# 1: markdown (Pandoc) - Default
-# 2: commonmark (CommonMark Markdown)
-# 3: gfm (GitHub-Flavored Markdown)
-# 4: markdown_mmd (MultiMarkdown)
-# 5: markdown_phpextra (PHP Markdown Extra)
-# 6: markdown_strict (original unextended Markdown)
-$conversion = 1
+# Specify Pandoc output format and optional extensions in the format: <format><+extension><-extension>. See: https://pandoc.org/MANUAL.html#options
+# Examples:
+#   markdown-simple_tables-multiline_tables-grid_tables+pipe_tables
+#   commonmark+pipe_tables
+#   gfm+pipe_tables
+#   markdown_mmd-simple_tables-multiline_tables-grid_tables+pipe_tables
+#   markdown_phpextra-simple_tables-multiline_tables-grid_tables+pipe_tables
+#   markdown_strict+simple_tables-multiline_tables-grid_tables+pipe_tables
+# Default:
+#   markdown-simple_tables-multiline_tables-grid_tables+pipe_tables
+$conversion = 'markdown-simple_tables-multiline_tables-grid_tables+pipe_tables'
 
 # Whether to include page timestamp and separator at top of document
 # 1: Include - Default
@@ -63,7 +66,7 @@ $headerTimestampEnabled = 1
 # 2: Keep double spaces
 $keepspaces = 1
 
-# Whether to clear escape symbols from md files
+# Whether to clear escape symbols from md files. See: https://pandoc.org/MANUAL.html#backslash-escapes
 # 1: Clear all '\' characters  - Default
 # 2: Clear all '\' characters except those preceding alphanumeric characters
 # 3: Keep '\' symbol escape

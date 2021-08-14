@@ -47,7 +47,7 @@ $usedocx = '1'
 # $keepdocx = 1 # Deliberately omit a configuration option from
 $prefixFolders = 1
 $medialocation = 1
-$conversion = 1
+$conversion = 'markdown-simple_tables-multiline_tables-grid_tables+pipe_tables' # Default
 $headerTimestampEnabled = 1
 $keepspaces = 1
 $keepescape = 1
@@ -149,24 +149,6 @@ Describe "Validate-Configuration" -Tag 'Unit' {
                 $config = Get-DefaultConfiguration
                 Mock Test-Path { $true }
                 $config['usedocx']['value'] = $_
-
-                { $config | Validate-Configuration } | Should -Throw 'The value must be between'
-            }
-
-            # Valid
-            1..6 | % {
-                $config = Get-DefaultConfiguration
-                Mock Test-Path { $true }
-                $config['conversion']['value'] = $_
-
-                { $config | Validate-Configuration } | Should -Not -Throw
-            }
-
-            # Invalid
-            0,7 | % {
-                $config = Get-DefaultConfiguration
-                Mock Test-Path { $true }
-                $config['conversion']['value'] = $_
 
                 { $config | Validate-Configuration } | Should -Throw 'The value must be between'
             }
@@ -1064,6 +1046,19 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
 
             foreach ($pageCfg in $result) {
                 $pageCfg['mediaParentPath'] | Should -Be $pageCfg['fileDirectory']
+            }
+        }
+
+        It "Should honor config conversion" {
+            $params['Config']['conversion']['value'] = 'gfm+pipe_tables'
+
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 15 pages from 'test' notebook, 15 pages from 'test2' notebook
+            $result.Count | Should -Be 30
+
+            foreach ($pageCfg in $result) {
+                $pageCfg['conversion'] | Should -Be $params['Config']['conversion']['value']
             }
         }
 
