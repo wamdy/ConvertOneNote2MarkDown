@@ -204,33 +204,38 @@ Function Compile-Configuration {
     $config = Get-DefaultConfiguration
 
     # Override configuration
-    if (Test-Path $PSScriptRoot/config.ps1) {
-        # Get override configuration from config file ./config.ps1
-        & {
-            $scriptblock = [scriptblock]::Create( (Get-Content $PSScriptRoot/config.ps1 -Raw) )
-            . $scriptblock
-            foreach ($key in @($config.Keys)) {
-                # E.g. 'string', 'int'
-                $typeName = [Microsoft.PowerShell.ToStringCodeMethods]::Type($config[$key]['default'].GetType())
-                $config[$key]['value'] = Invoke-Expression -Command "(Get-Variable -Name `$key -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Value) -as [$typeName]"
-                if ($config[$key]['value'] -is [string]) {
-                    # Trim string
-                    $config[$key]['value'] = $config[$key]['value'].Trim()
+    $configFile = [io.path]::combine( $PSScriptRoot, 'config.ps1' )
+    if (Test-Path $configFile) {
+        try {
+            & {
+                $scriptblock = [scriptblock]::Create( (Get-Content -LiteralPath $configFile -Raw) )
+                . $scriptblock *>$null # Cleanup the pipeline
+                foreach ($key in @($config.Keys)) {
+                    # E.g. 'string', 'int'
+                    $typeName = [Microsoft.PowerShell.ToStringCodeMethods]::Type($config[$key]['default'].GetType())
+                    $config[$key]['value'] = Invoke-Expression -Command "(Get-Variable -Name `$key -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Value) -as [$typeName]"
+                    if ($config[$key]['value'] -is [string]) {
+                        # Trim string
+                        $config[$key]['value'] = $config[$key]['value'].Trim()
 
-                    # Remove trailing slash(es) for paths
-                    if ($key -match 'path' -and $config[$key]['value'] -match '[/\\]') {
-                        $config[$key]['value'] = $config[$key]['value'].TrimEnd('/').TrimEnd('\')
+                        # Remove trailing slash(es) for paths
+                        if ($key -match 'path' -and $config[$key]['value'] -match '[/\\]') {
+                            $config[$key]['value'] = $config[$key]['value'].TrimEnd('/').TrimEnd('\')
+                        }
+                    }
+                    # Fallback on default value if the input is empty string
+                    if ($config[$key]['value'] -is [string] -and $config[$key]['value'] -eq '') {
+                        $config[$key]['value'] = $config[$key]['default']
+                    }
+                    # Fallback on default value if the input is empty integer (0)
+                    if ($config[$key]['value'] -is [int] -and $config[$key]['value'] -eq 0) {
+                        $config[$key]['value'] = $config[$key]['default']
                     }
                 }
-                # Fallback on default value if the input is empty string
-                if ($config[$key]['value'] -is [string] -and $config[$key]['value'] -eq '') {
-                    $config[$key]['value'] = $config[$key]['default']
-                }
-                # Fallback on default value if the input is empty integer (0)
-                if ($config[$key]['value'] -is [int] -and $config[$key]['value'] -eq 0) {
-                    $config[$key]['value'] = $config[$key]['default']
-                }
             }
+        }catch {
+            Write-Warning "There is an error in the configuration file $configFile $( $_.ScriptStackTrace ). `nThe exception was: $( $_.Exception.Message )"
+            throw
         }
     }else {
         # Get override configuration from interactive prompts
@@ -281,7 +286,7 @@ Function Validate-Configuration {
         $defaultConfig = Get-DefaultConfiguration
         foreach ($key in $defaultConfig.Keys) {
             if (! $Config.Contains($key) -or ($null -eq $Config[$key]) -or ($null -eq $Config[$key]['value'])) {
-                throw "Missing configuration option '$key'"
+                throw "Missing or invalid configuration option '$key'. Expected a value of type $( $defaultConfig[$key]['default'].GetType().FullName )"
             }
             if ($defaultConfig[$key]['default'].GetType().FullName -ne $Config[$key]['value'].GetType().FullName) {
                 throw "Invalid configuration option '$key'. Expected a value of type $( $defaultConfig[$key]['default'].GetType().FullName ), but value was of type $( $config[$key]['value'].GetType().FullName )"
@@ -1336,7 +1341,8 @@ Function Convert-OneNote2MarkDown {
         if ($ErrorActionPreference -eq 'Stop') {
             throw
         }else {
-            Write-Error -ErrorRecord $_
+            Write-Error -Message $_.Exception.Message
+            Write-Error -Message $_.ScriptStackTrace
         }
     }finally {
         'Cleaning up...' | Write-Host -ForegroundColor Cyan
