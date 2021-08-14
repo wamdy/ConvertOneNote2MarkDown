@@ -943,7 +943,7 @@ Function New-SectionGroupConversionConfig {
                                         description = "Use CRLF for newlines"
                                         replacements = @(
                                             @{
-                                                searchRegex = '`r*\n'
+                                                searchRegex = '\r*\n'
                                                 replacement = "`r`n"
                                             }
                                         )
