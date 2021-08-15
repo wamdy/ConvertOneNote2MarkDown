@@ -1322,15 +1322,22 @@ Function Convert-OneNote2MarkDown {
             }
         }
 
+        "`nNotebooks to convert:" | Write-Host -ForegroundColor Cyan
+        $notebooks.name | Write-Host -ForegroundColor Green
+
         # Convert the notebook(s)
-        "`nConverting notes..." | Write-Host -ForegroundColor Cyan
-        New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $config['notesdestpath']['value'] -Config $config -SectionGroups $notebooks -LevelsFromRoot 0 -ErrorVariable +totalerr | Tee-Object -Variable pageConversionConfigs | Convert-OneNotePage -OneNoteConnection $OneNote -Config $config -ErrorVariable +totalerr
-        "Done converting notes." | Write-Host -ForegroundColor Cyan
+        $pageConversionConfigsAll = @()
+        foreach ($notebook in $notebooks) {
+            "`nConverting notebook '$( $notebook.name )'... (Ignoring deleted notes)" | Write-Host -ForegroundColor Cyan
+            New-SectionGroupConversionConfig -OneNoteConnection $OneNote -NotesDestination $config['notesdestpath']['value'] -Config $config -SectionGroups $notebook -LevelsFromRoot 0 -ErrorVariable +totalerr | Tee-Object -Variable pageConversionConfigs | Convert-OneNotePage -OneNoteConnection $OneNote -Config $config -ErrorVariable +totalerr
+            "`nDone converting notebook '$( $notebook.name )' with $( ($pageConversionConfigs | Measure-object).Count ) notes." | Write-Host -ForegroundColor Cyan
+            $pageConversionConfigsAll += $pageConversionConfigs
+        }
 
         # Export all Page Conversion Configuration objects as .json, which is useful for debugging
         if ($ConversionConfigurationExportPath) {
-            "Exporting Page Conversion Configuration as JSON file: $ConversionConfigurationExportPath" | Write-Host -ForegroundColor Cyan
-            $pageConversionConfigs | ConvertTo-Json -Depth 100 | Out-File $ConversionConfigurationExportPath -Encoding utf8 -Force
+            "`nExporting Page Conversion Configuration as JSON file with $( $pageConversionConfigsAll.Count ) objects: $ConversionConfigurationExportPath" | Write-Host -ForegroundColor Cyan
+            $pageConversionConfigsAll | ConvertTo-Json -Depth 100 | Out-File $ConversionConfigurationExportPath -Encoding utf8 -Force
         }
     }catch {
         if ($ErrorActionPreference -eq 'Stop') {
