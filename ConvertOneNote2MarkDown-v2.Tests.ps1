@@ -1735,75 +1735,93 @@ Describe "Convert-OneNote2MarkDown" -Tag 'Unit' {
 
     Context 'Behavior' {
 
-        function Validate-Dependencies {}
-        Mock Validate-Dependencies {}
-        function Compile-Configuration {}
-        Mock Compile-Configuration {
-            Get-DefaultConfiguration
-        }
-        function Validate-Configuration {
-            param (
-                [Parameter(ValueFromPipeline)]
-                [object]
-                $InputObject
-            )
-        }
-        Mock Validate-Configuration {
-            param (
-                [Parameter(ValueFromPipeline)]
-                [object]
-                $InputObject
-            )
-            process {
-                $InputObject
+        BeforeEach {
+            $params = @{
+                ErrorAction = 'Stop'
             }
+            function Validate-Dependencies {}
+            Mock Validate-Dependencies {}
+            function Compile-Configuration {}
+            Mock Compile-Configuration {
+                Get-DefaultConfiguration
+            }
+            function Validate-Configuration {
+                param (
+                    [Parameter(ValueFromPipeline)]
+                    [object]
+                    $InputObject
+                )
+            }
+            Mock Validate-Configuration {
+                param (
+                    [Parameter(ValueFromPipeline)]
+                    [object]
+                    $InputObject
+                )
+                process {
+                    $InputObject
+                }
+            }
+            function Print-Configuration {}
+            Mock Print-Configuration {}
+            function New-OneNoteConnection {}
+            Mock New-OneNoteConnection { 'some connection' }
+            function Get-OneNoteHierarchy {}
+            Mock Get-OneNoteHierarchy {
+                Get-FakeOneNoteHierarchy
+            }
+            function New-SectionGroupConversionConfig {}
+            Mock New-SectionGroupConversionConfig { 'some conversion config' }
+            function Convert-OneNotePage {
+                param (
+                    # Onenote connection object
+                    [Parameter(Mandatory)]
+                    [object]
+                    $OneNoteConnection
+                ,
+                    # ConvertOneNote2MarkDown configuration object
+                    [Parameter(Mandatory)]
+                    [object]
+                    $Config
+                ,
+                    [Parameter(Mandatory,ValueFromPipeline)]
+                    [ValidateNotNullOrEmpty()]
+                    [object]
+                    $InputObject
+                )
+            }
+            Mock Convert-OneNotePage {}
+            Mock Get-Variable {}
+            function Print-ConversionErrors {}
+            Mock Print-ConversionErrors {}
         }
-        function Print-Configuration {}
-        Mock Print-Configuration {}
-        function New-OneNoteConnection {}
-        Mock New-OneNoteConnection { 'some connection' }
-        function Get-OneNoteHierarchy {}
-        Mock Get-OneNoteHierarchy {
-            Get-FakeOneNoteHierarchy
-        }
-        function New-SectionGroupConversionConfig {}
-        Mock New-SectionGroupConversionConfig { 'some conversion config' }
-        function Convert-OneNotePage {
-            param (
-                # Onenote connection object
-                [Parameter(Mandatory)]
-                [object]
-                $OneNoteConnection
-            ,
-                # ConvertOneNote2MarkDown configuration object
-                [Parameter(Mandatory)]
-                [object]
-                $Config
-            ,
-                [Parameter(Mandatory,ValueFromPipeline)]
-                [ValidateNotNullOrEmpty()]
-                [object]
-                $InputObject
-            )
-        }
-        Mock Convert-OneNotePage {}
-        Mock Get-Variable {}
-        function Print-ConversionErrors {}
-        Mock Print-ConversionErrors {}
 
         It "Validates dependencies, compiles and validates configuration, prints configuration, connects to onenote, gets notes hierarchy, builds conversion configuration and converts notes, finally cleans up and prints any errors" {
-            Convert-OneNote2MarkDown 6>$null
+            Convert-OneNote2MarkDown @params 6>$null
 
-            Assert-MockCalled -CommandName Validate-Dependencies -Times 1
-            Assert-MockCalled -CommandName Compile-Configuration -Times 1
-            Assert-MockCalled -CommandName Validate-Configuration -Times 1
-            Assert-MockCalled -CommandName Print-Configuration -Times 1
-            Assert-MockCalled -CommandName New-OneNoteConnection -Times 1
-            Assert-MockCalled -CommandName Get-OneNoteHierarchy -Times 1
-            Assert-MockCalled -CommandName New-SectionGroupConversionConfig -Times 2
-            Assert-MockCalled -CommandName Convert-OneNotePage -Times 2
-            Assert-MockCalled -CommandName Get-Variable -Times 1
-            Assert-MockCalled -CommandName Print-ConversionErrors -Times 1
+            Assert-MockCalled -CommandName Validate-Dependencies -Times 1 -Scope It
+            Assert-MockCalled -CommandName Compile-Configuration -Times 1 -Scope It
+            Assert-MockCalled -CommandName Validate-Configuration -Times 1 -Scope It
+            Assert-MockCalled -CommandName Print-Configuration -Times 1 -Scope It
+            Assert-MockCalled -CommandName New-OneNoteConnection -Times 1 -Scope It
+            Assert-MockCalled -CommandName Get-OneNoteHierarchy -Times 1 -Scope It
+            Assert-MockCalled -CommandName New-SectionGroupConversionConfig -Times 2 -Scope It
+            Assert-MockCalled -CommandName Convert-OneNotePage -Times 2 -Scope It
+            Assert-MockCalled -CommandName Get-Variable -Times 1 -Scope It
+            Assert-MockCalled -CommandName Print-ConversionErrors -Times 1 -Scope It
+        }
+
+        It "Should honor config targetNotebook" {
+            Mock Compile-Configuration {
+                $config = Get-DefaultConfiguration
+                $config['targetNotebook']['value'] = 'test'
+                $config
+            }
+
+            Convert-OneNote2MarkDown @params 6>$null
+
+            Assert-MockCalled -CommandName New-SectionGroupConversionConfig -Times 1 -Scope It
+            Assert-MockCalled -CommandName Convert-OneNotePage -Times 1 -Scope It
         }
 
     }
