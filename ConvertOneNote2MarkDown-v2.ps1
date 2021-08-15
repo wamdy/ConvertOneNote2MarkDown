@@ -723,7 +723,7 @@ Function New-SectionGroupConversionConfig {
                         $pageCfg['pageLevel'] = $page.pageLevel -as [int]
                         $pageCfg['conversion'] = $config['conversion']['value']
                         $pageCfg['pagePrefix'] = & {
-                            # 9 differences cases.
+                            # 9 different scenarios
                             if ($pageCfg['pageLevel'] -eq 1) {
                                 # 1 -> 1, 2 -> 1, or 3 -> 1
                                 ''
@@ -736,8 +736,13 @@ Function New-SectionGroupConversionConfig {
                                         # 2 -> 2, or 3 -> 3
                                         "$( Split-Path $previousPage['filePathRel'] -Parent )$( [io.path]::DirectorySeparatorChar )"
                                     }else {
-                                        # 3 -> 2
-                                        "$( Split-Path (Split-Path $previousPage['filePathRel'] -Parent) -Parent )$( [io.path]::DirectorySeparatorChar )"
+                                        # 3 -> 2 (or 4 -> 2, but 4th level subpages don't exist, but technically this supports it)
+                                        $split = $previousPage['filePathRel'].Split([io.path]::DirectorySeparatorChar)
+                                        $index = $pageCfg['pageLevel'] - 1 - 1 # If page level n, the prefix should be n-1
+                                        if ($index -lt 0) {
+                                            $index = 0 # The shallowest subpage must be a child of a first level page, i.e. $split[0]
+                                        }
+                                        "$( $split[0..$index] -join [io.path]::DirectorySeparatorChar )$( [io.path]::DirectorySeparatorChar )"
                                     }
                                 }else {
                                     '' # Should never end up here
