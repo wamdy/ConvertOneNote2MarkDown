@@ -1314,7 +1314,7 @@ Function Convert-OneNote2MarkDown {
         # Get and validate the notebook(s) to convert
         $notebooks = @(
             if ($config['targetNotebook']['value']) {
-                $hierarchy.Notebooks.Notebook | Where-Object { $_.Name -match $config['targetNotebook']['value'] }
+                $hierarchy.Notebooks.Notebook | Where-Object { $_.Name -eq $config['targetNotebook']['value'] }
             }else {
                 $hierarchy.Notebooks.Notebook
             }
