@@ -1544,7 +1544,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         It "Creates directories" {
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName New-Item -ParameterFilter { $Path -and $Force } -Times 4
+            Assert-MockCalled -CommandName New-Item -ParameterFilter { $Path -and $Force } -Times 5 -Scope It
         }
 
         It "Halts converting if creation of any directory fails" {
@@ -1560,7 +1560,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
 
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName Remove-Item -ParameterFilter { $LiteralPath -and $Force } -Times 2
+            Assert-MockCalled -CommandName Remove-Item -ParameterFilter { $LiteralPath -and $Force } -Times 2 -Scope It
         }
 
         It "Halts converting if removal of existing docx fails" {
@@ -1569,15 +1569,15 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
-            Assert-MockCalled -CommandName Test-Path -ParameterFilter { $LiteralPath } -Times 1
-            Assert-MockCalled -CommandName Remove-Item -ParameterFilter { $LiteralPath -and $Force } -Times 1
+            Assert-MockCalled -CommandName Test-Path -ParameterFilter { $LiteralPath } -Times 1 -Scope It
+            Assert-MockCalled -CommandName Remove-Item -ParameterFilter { $LiteralPath -and $Force } -Times 1 -Scope It
             $err.Exception.Message | Select-Object -First 1 | Should -match 'Failed to convert page'
         }
 
         It "Publishes OneNote page to Word" {
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName Publish-OneNotePageToDocx -Times 1
+            Assert-MockCalled -CommandName Publish-OneNotePageToDocx -Times 1 -Scope It
         }
 
         It "Halts converting if publish OneNote page to Word fails" {
@@ -1591,7 +1591,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         It "Runs pandoc conversion from docx to markdown" {
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName Start-Process -Times 1
+            Assert-MockCalled -CommandName Start-Process -Times 1 -Scope It
         }
 
         It "Halts converting if pandoc conversion from docx to markdown fails" {
@@ -1620,7 +1620,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         It "Saves page attachment(s)" {
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName Copy-Item -Times 1
+            Assert-MockCalled -CommandName Copy-Item -Times 1 -Scope It
         }
 
         It "Does not halt converting if saving of any attachment fails" {
@@ -1634,8 +1634,8 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         It "Rename page image(s) to unique names" {
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName Get-ChildItem -Times 1
-            Assert-MockCalled -CommandName Move-Item -Times 1
+            Assert-MockCalled -CommandName Get-ChildItem -Times 1 -Scope It
+            Assert-MockCalled -CommandName Move-Item -Times 1 -Scope It
         }
 
         It "Does not halt conversion if renaming image(s) fails" {
@@ -1649,8 +1649,8 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         It "Markdown Mutation: Rename page image references in markdown to unique names" {
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName Get-Content -ParameterFilter { $LiteralPath -and $Raw } -Times 1
-            Assert-MockCalled -CommandName Set-ContentNoBom -ParameterFilter { $LiteralPath } -Times 1
+            Assert-MockCalled -CommandName Get-Content -ParameterFilter { $LiteralPath -and $Raw } -Times 1 -Scope It
+            Assert-MockCalled -CommandName Set-ContentNoBom -ParameterFilter { $LiteralPath } -Times 1 -Scope It
         }
 
         It "Does not halt conversion if renaming image(s) references in markdown fails" {
@@ -1664,8 +1664,8 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         It "Markdown mutation: Performs mutations on markdown content" {
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName Get-Content -ParameterFilter { $LiteralPath -and ! $Raw } -Times 1
-            Assert-MockCalled -CommandName Set-ContentNoBom -ParameterFilter { $LiteralPath } -Times 1
+            Assert-MockCalled -CommandName Get-Content -ParameterFilter { $LiteralPath -and ! $Raw } -Times 1 -Scope It
+            Assert-MockCalled -CommandName Set-ContentNoBom -ParameterFilter { $LiteralPath } -Times 1 -Scope It
         }
 
         It "Does a dry run" {
