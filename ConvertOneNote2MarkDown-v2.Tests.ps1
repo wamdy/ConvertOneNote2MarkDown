@@ -1760,8 +1760,8 @@ Describe "Convert-OneNote2MarkDown" -Tag 'Unit' {
             Assert-MockCalled -CommandName Print-Configuration -Times 1
             Assert-MockCalled -CommandName New-OneNoteConnection -Times 1
             Assert-MockCalled -CommandName Get-OneNoteHierarchy -Times 1
-            Assert-MockCalled -CommandName New-SectionGroupConversionConfig -Times 1
-            Assert-MockCalled -CommandName Convert-OneNotePage -Times 1
+            Assert-MockCalled -CommandName New-SectionGroupConversionConfig -Times 2
+            Assert-MockCalled -CommandName Convert-OneNotePage -Times 2
             Assert-MockCalled -CommandName Get-Variable -Times 1
             Assert-MockCalled -CommandName Print-ConversionErrors -Times 1
         }
