@@ -39,7 +39,7 @@ $docxNamingConvention = 1
 # 2: Add prefixes for subpages (e.g. Page_Subpage.md)
 $prefixFolders = 1
 
-# Specify a value between 32 and 255 as the maximum length of the final markdown file name (page) and folder names (sections). Names with length exceeding this value will be truncated accordingly.
+# Specify a value between 32 and 255 as the maximum length of markdown file names, and their folder names (only when using subfolders for subpages (e.g. Page\Subpage.md)). File and folder names with length exceeding this value will be truncated accordingly.
 # NOTE: If you are using prefixes for subpages (e.g. Page_Subpage.md), it is recommended to set this to at 100 or more.
 # Default: 32
 $mdFileNameAndFolderNameMaxLength = 32
