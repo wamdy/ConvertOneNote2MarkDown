@@ -97,6 +97,16 @@ Whether to use prefix vs subfolders
             value = 1
             validateRange = 1,2
         }
+        mdFileNameAndFolderNameMaxLength = @{
+            description = @'
+Specify a value between 32 and 255 as the maximum length of the final markdown file name (page) and folder names (sections). Names with length exceeding this value will be truncated accordingly.
+NOTE: If you are using prefixes for subpages (e.g. Page_Subpage.md), it is recommended to set this to at 100 or more.
+Default: 32
+'@
+            default = 32
+            value = 32
+            validateRange = 32,255
+        }
         medialocation = @{
             description = @'
 Whether to store media in single or multiple folders
@@ -775,7 +785,7 @@ Function New-SectionGroupConversionConfig {
                             if ($recurrence -gt 0) {
                                 $filePathRel = "$filePathRel-$recurrence"
                             }
-                            $filePathRel | Truncate-PathFileName  # Truncate so we don't hit the file name limit
+                            $filePathRel | Truncate-PathFileName -Length $config['mdFileNameAndFolderNameMaxLength']['value'] # Truncate to no more than 255 characters so we don't hit the folder name limit on most file systems on Windows / Linux
                         }
                         $pageCfg['filePathRelUnderscore'] = $pageCfg['filePathRel'].Replace( [io.path]::DirectorySeparatorChar, '_' )
                         $pageCfg['filePathNormal'] = & {
@@ -784,7 +794,7 @@ Function New-SectionGroupConversionConfig {
                             }else {
                                 [io.path]::combine( $cfg['notesDirectory'], $sectionCfg['nameCompat'], "$( $pageCfg['filePathRel'] )" )
                             }
-                            "$( $pathWithoutExtension | Truncate-PathFileName -Length 252 ).md" # Truncate to 255 characters so we don't hit the file name limit
+                            "$( $pathWithoutExtension | Truncate-PathFileName -Length ($config['mdFileNameAndFolderNameMaxLength']['value'] - 3) ).md" # Truncate to no more than 255 characters so we don't hit the file name limit on Windows / Linux
                         }
                         $pageCfg['filePathLong'] = "\\?\$( $pageCfg['filePathNormal'] )" # A non-Win32 path. Prefixing with '\\?\' allows Windows Powershell <= 5 (based on Win32) to support long absolute paths.
                         $pageCfg['filePath'] = if ($PSVersionTable.PSVersion.Major -le 5) {
