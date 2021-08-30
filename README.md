@@ -29,7 +29,7 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
 * Process pages that are in sections at the **Notebook, Section Group and all Nested Section Group levels**
 * Allows to choose between **converting a specific notebook or all notebooks**
 * Allows to **choose between creating subfolders for subpages** (e.g. `Page\Subpage.md`) or **appending prefixes** (e.g. `Page_Subpage.md`)
-* Allows to set the maximum length of markdown files and their section folder names to any length between `32` and `255` characters. A lower value can help avoid hitting [file and folder name limits of `255` bytes on file systems](https://en.wikipedia.org/wiki/Comparison_of_file_systems#Limits). A higher value preserves a longer title. If using page prefixes (e.g. `Page_Subpage.md`), it is recommended to use a value of `100` or greater.
+* Allows to specify a value between `32` and `255` as the maximum length of markdown file names, and their folder names (only when using subfolders for subpages (e.g. `Page\Subpage.md`)). A lower value can help avoid hitting [file and folder name limits of `255` bytes on file systems](https://en.wikipedia.org/wiki/Comparison_of_file_systems#Limits). A higher value preserves a longer page title. If using page prefixes (e.g. `Page_Subpage.md`), it is recommended to use a value of `100` or greater.
 * Allows to choose between putting all media (images, attachments) in a central `/media` folder for each notebook, or in a separate `/media` folder in each folder of the hierarchy
   * Symbols in media file names removed for link compatibility
   * Updates media references in the resulting `.md` files, generating *relative* references to the media files within the markdown document
