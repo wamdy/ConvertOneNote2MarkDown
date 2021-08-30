@@ -39,6 +39,11 @@ $docxNamingConvention = 1
 # 2: Add prefixes for subpages (e.g. Page_Subpage.md)
 $prefixFolders = 1
 
+# Specify a value between 32 and 255 as the maximum length of the final markdown file name (page) and folder names (sections). Names with length exceeding this value will be truncated accordingly.
+# NOTE: If you are using prefixes for subpages (e.g. Page_Subpage.md), it is recommended to set this to at 100 or more.
+# Default: 32
+$mdFileNameAndFolderNameMaxLength = 32
+
 # Whether to store media in single or multiple folders
 # 1: Images stored in single 'media' folder at Notebook-level - Default
 # 2: Separate 'media' folder for each folder in the hierarchy
