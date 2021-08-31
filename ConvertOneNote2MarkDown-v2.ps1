@@ -174,6 +174,16 @@ Whether to use Line Feed (LF) or Carriage Return + Line Feed (CRLF) for new line
             value = 1
             validateRange = 1,2
         }
+        exportPdf = @{
+            description = @'
+Whether to include a PDF export alongside the markdown file
+1: Don't include PDF - Default
+2: Include PDF
+'@
+            default = 1
+            value = 1
+            validateRange = 1,2
+        }
     }
 
     $config
@@ -515,7 +525,7 @@ Function New-OneNoteConnection {
     [CmdletBinding()]
     param ()
 
-    # Create a OneNote connection. See: See: https://docs.microsoft.com/en-us/office/client-developer/onenote/application-interface-onenote
+    # Create a OneNote connection. See: https://docs.microsoft.com/en-us/office/client-developer/onenote/application-interface-onenote
     if ($PSVersionTable.PSVersion.Major -le 5) {
         if ($OneNote = New-Object -ComObject OneNote.Application) {
             $OneNote
@@ -581,7 +591,7 @@ Function Get-OneNotePageContent {
     $page
 }
 
-Function Publish-OneNotePageToDocx {
+Function Publish-OneNotePage {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
@@ -598,9 +608,15 @@ Function Publish-OneNotePageToDocx {
         [ValidateNotNullOrEmpty()]
         [string]
         $Destination
+    ,
+        [Parameter(Mandatory)]
+        [ValidateSet('pfOneNotePackage', 'pfOneNotePackage', 'pfOneNote ', 'pfPDF', 'pfXPS', 'pfWord', 'pfEMF', 'pfHTML', 'pfOneNote2007')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $PublishFormat
     )
 
-    $OneNoteConnection.Publish($PageId, $Destination, "pfWord", "")
+    $OneNoteConnection.Publish($PageId, $Destination, $PublishFormat, "")
 }
 
 Function New-SectionGroupConversionConfig {
@@ -806,6 +822,12 @@ Function New-SectionGroupConversionConfig {
                         $pageCfg['fileName'] = Split-Path $pageCfg['filePathNormal'] -Leaf
                         $pageCfg['fileExtension'] = if ($pageCfg['filePathNormal'] -match '(\.[^.]+)$') { $matches[1] } else { '' }
                         $pageCfg['fileBaseName'] = $pageCfg['fileName'] -replace "$( [regex]::Escape($pageCfg['fileExtension']) )$", ''
+                        $pageCfg['pdfExportFilePathTmp'] = [io.path]::combine( (Split-Path $pageCfg['filePath'] -Parent ), "$( $pageCfg['id'] )-$( $pageCfg['lastModifiedTimeEpoch'] ).pdf" ) # Publishing a .pdf seems to be limited to 204 characters. So we will export the .pdf to a unique file name, then rename it to the actual name
+                        $pageCfg['pdfExportFilePath'] = if ( ($pageCfg['fileName'].Length + ('.pdf'.Length - '.md'.Length)) -le $config['mdFileNameAndFolderNameMaxLength']['value']) {
+                            $pageCfg['filePath'] -replace '\.md$', '.pdf'
+                        }else {
+                            $pageCfg['filePath'] -replace '.\.md$', '.pdf' # Trim 1 character in the basename when replacing the extension
+                        }
                         $pageCfg['levelsPrefix'] = if ($config['medialocation']['value'] -eq 2) {
                             ''
                         }else {
@@ -1094,13 +1116,31 @@ Function Convert-OneNotePage {
                 try {
                     "Publishing new docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
                     if ($config['dryRun']['value'] -eq 1) {
-                        Publish-OneNotePageToDocx -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['fullexportpath']
+                        Publish-OneNotePage -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['fullexportpath'] -PublishFormat 'pfWord'
                     }
                 }catch {
-                    throw "Error while publishing page to docx file $( $pageCfg['object'].name ): $( $_.Exception.Message )"
+                    throw "Error while publishing page to docx file $( $pageCfg['fullexportpath'] ): $( $_.Exception.Message )"
                 }
             }else {
                 "Existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
+            }
+
+            # Publish OneNote page to pdf, don't proceed if it fails
+            if ($config['exportPdf']['value'] -eq 2) {
+                if (! (Test-Path -LiteralPath $pageCfg['pdfExportFilePath']) ) {
+                    try {
+                        "Publishing new pdf file: $( $pageCfg['pdfExportFilePath'] )" | Write-Verbose
+                        if ($config['dryRun']['value'] -eq 1) {
+                            Publish-OneNotePage -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['pdfExportFilePathTmp'] -PublishFormat 'pfPdf'
+                            Move-Item $pageCfg['pdfExportFilePathTmp'] $pageCfg['pdfExportFilePath']
+                        }
+                        "pdf file ready: $( $pageCfg['pdfExportFilePath'] )" | Write-Host -ForegroundColor Green
+                    }catch {
+                        throw "Error while publishing page to pdf file $( $pageCfg['pdfExportFilePath'] ): $( $_.Exception.Message )"
+                    }
+                }else {
+                    "Existing pdf file: $( $pageCfg['pdfExportFilePath'] )" | Write-Host -ForegroundColor Green
+                }
             }
 
             # https://gist.github.com/heardk/ded40b72056cee33abb18f3724e0a580

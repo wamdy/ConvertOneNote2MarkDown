@@ -81,3 +81,8 @@ $keepescape = 1
 # 1: LF (unix) - Default
 # 2: CRLF (windows)
 $newlineCharacter = 1
+
+# Whether to include a PDF export alongside the markdown file
+# 1: Don't include PDF - Default
+# 2: Include PDF
+$exportPdf = 1
