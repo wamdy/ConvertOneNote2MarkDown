@@ -1389,6 +1389,47 @@ foo`r`nbar`r`nbaz
             }
         }
 
+        It "Should honor config exportPdf" {
+            $params['Config']['exportPdf']['value'] = 2
+
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 15 pages from 'test' notebook, 15 pages from 'test2' notebook
+            $result.Count | Should -Be 48
+
+            foreach ($pageCfg in $result) {
+                $pageCfg['pdfExportFilePath'] | Should -Be ($pageCfg['FilePath'] -replace '\.md$', '.pdf')
+            }
+
+            # 5 notes, each with very long names
+            $fakeHierarchy = @'
+<?xml version="1.0"?>
+<one:Notebooks xmlns:one="http://schemas.microsoft.co1m/office/onenote/2013/onenote">
+    <one:Notebook name="test" nickname="test" ID="{38E47DAB-211E-4EC1-85F1-129656A9D2CE}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/" lastModifiedTime="2021-08-06T16:27:58.000Z" color="#ADE792">
+        <one:Section name="s0" ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{B0}" path="https://d.docs.live.net/741e69cc14cf9571/Skydrive Notebooks/test/s0.one" lastModifiedTime="2021-08-06T16:08:25.000Z" color="#8AA8E4">
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19461971475288592555920101886406896686096991}" name="Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T16:08:25.000Z" pageLevel="1" />
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19542261697052950701320178013485171541838441}" name="Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name" dateTime="2021-08-06T15:36:14.000Z" lastModifiedTime="2021-08-06T15:38:01.000Z" pageLevel="2" />
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19535140647270019211520151454305551340000401}" name="Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name" dateTime="2021-08-06T15:38:03.000Z" lastModifiedTime="2021-08-06T15:46:36.000Z" pageLevel="3" />
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19542261697052950701320178013485171541838442}" name="Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name" dateTime="2021-08-06T15:36:14.000Z" lastModifiedTime="2021-08-06T15:38:01.000Z" pageLevel="2" />
+            <one:Page ID="{3D017C7D-F890-4AC8-A094-DEC1163E7B85}{1}{E19461971475288592555920101886406896686096992}" name="Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name Some long name" dateTime="2021-08-06T15:36:33.000Z" lastModifiedTime="2021-08-06T16:08:25.000Z" pageLevel="1" />
+        </one:Section>
+    </one:Notebook>
+</one:Notebooks>
+'@ -as [xml]
+            $params['SectionGroups'] = $fakeHierarchy.Notebooks.Notebook
+            $params['Config']['mdFileNameAndFolderNameMaxLength']['value'] = 100
+            $params['Config']['exportPdf']['value'] = 2
+
+            $result = @( New-SectionGroupConversionConfig @params 6>$null )
+
+            # 5 pages from 'test' notebook
+            $result.Count | Should -Be 5
+
+            foreach ($pageCfg in $result) {
+                $pageCfg['pdfExportFilePath'] | Should -Be ($pageCfg['FilePath'] -replace '.\.md$', '.pdf') # 1 character from the basename should have been trimmed when replacing the extension with '.pdf'
+            }
+        }
+
         It "-AsArray should construct a full Section Group conversion configuration object, based on a given Section Group XML object. Ignores pages in recycle bin." {
             $params['AsArray'] = $true
 
@@ -1472,8 +1513,34 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
             }
             Mock Remove-Item {}
             Mock Remove-Item -ParameterFilter { $LiteralPath -and $Force } {}
-            function Publish-OneNotePageToDocx{}
-            Mock Publish-OneNotePageToDocx {}
+            function Publish-OneNotePage {
+                param (
+                    [Parameter(Mandatory)]
+                    [ValidateNotNullOrEmpty()]
+                    [object]
+                    $OneNoteConnection
+                ,
+                    [Parameter(Mandatory)]
+                    [ValidateNotNullOrEmpty()]
+                    [string]
+                    $PageId
+                ,
+                    [Parameter(Mandatory)]
+                    [ValidateNotNullOrEmpty()]
+                    [string]
+                    $Destination
+                ,
+                    [Parameter(Mandatory)]
+                    [ValidateSet('pfOneNotePackage', 'pfOneNotePackage', 'pfOneNote ', 'pfPDF', 'pfXPS', 'pfWord', 'pfEMF', 'pfHTML', 'pfOneNote2007')]
+                    [ValidateNotNullOrEmpty()]
+                    [string]
+                    $PublishFormat
+                )
+            }
+            Mock Publish-OneNotePage {}
+            Mock Publish-OneNotePage -ParameterFilter { $PublishFormat -eq 'pfWord' } {}
+            Mock Publish-OneNotePage -ParameterFilter { $PublishFormat -eq 'pfPdf' } {}
+
             Mock Start-Process {
                 [pscustomobject]@{
                     ExitCode = 0
@@ -1578,15 +1645,25 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         It "Publishes OneNote page to Word" {
             Convert-OneNotePage @params 6>$null
 
-            Assert-MockCalled -CommandName Publish-OneNotePageToDocx -Times 1 -Scope It
+            Assert-MockCalled -CommandName Publish-OneNotePage -ParameterFilter { $PublishFormat -eq 'pfWord' } -Times 1 -Scope It
         }
 
         It "Halts converting if publish OneNote page to Word fails" {
-            Mock Publish-OneNotePageToDocx { throw }
+            Mock Publish-OneNotePage -ParameterFilter { $PublishFormat -eq 'pfWord' } { throw }
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
             $err.Exception.Message | Select-Object -First 1 | Should -match 'Failed to convert page'
+        }
+
+        It "Publishes OneNote page to pdf" {
+            $params['Config']['exportPdf']['value'] = 2
+            Mock Move-Item {}
+
+            Convert-OneNotePage @params 6>$null
+
+            Assert-MockCalled -CommandName Publish-OneNotePage -ParameterFilter { $PublishFormat -eq 'pfPdf' } -Times 1 -Scope It
+            Assert-MockCalled -CommandName Move-Item -Times 1 -Scope It
         }
 
         It "Runs pandoc conversion from docx to markdown" {
@@ -1672,7 +1749,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         It "Does a dry run" {
             Mock New-Item { 'foo' }
             Mock Remove-Item { 'foo' }
-            Mock Publish-OneNotePageToDocx { 'foo' }
+            Mock Publish-OneNotePage { 'foo' }
             Mock Start-Process { 'foo' }
             Mock Move-Item { 'foo' }
             Mock Get-Content { 'foo' }

@@ -48,6 +48,7 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
 * Allows to choose whether to remove double spaces between bullet points, non-breaking spaces from blank lines, and `>` after bullet lists, which are created when converting with Pandoc
 * Allows to choose whether to remove `\` escape symbol that are created when converting with Pandoc
 * Allows to choose whether to use Line Feed (LF) or Carriage Return + Line Feed (CRLF) for new lines
+* Allows to choose whether to include a `.pdf` export alongside the `.md` file. `.md` does not preserve `InkDrawing` (i.e. overlayed drawings, highlights, pen marks) absolute positions within a page, but a `.pdf` export is a complete page snapshot that preserves `InkDrawing` absolute positions within a page.
 * Allows Detailed logging. Run the script with `-Verbose` to see detailed logs of each page's conversion.
 
 ## Known Issues
