@@ -853,7 +853,7 @@ Function New-SectionGroupConversionConfig {
                         $pageCfg['mediaPath'] = [io.path]::combine( $pageCfg['mediaParentPath'], 'media' )
                         $pageCfg['mediaParentPathPandoc'] = [io.path]::combine( $pageCfg['tmpPath'] ).Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
                         $pageCfg['mediaPathPandoc'] = [io.path]::combine( $pageCfg['tmpPath'], 'media').Replace( [io.path]::DirectorySeparatorChar, '/' ) # Pandoc outputs paths in markdown with with front slahes after the supplied <mediaPath>, e.g. '<mediaPath>/media/image.png'. So let's use a front-slashed supplied mediaPath
-                        $pageCfg['fullexportpath'] = if ($config['docxNamingConvention']['value'] -eq 1) {
+                        $pageCfg['docxExportFilePath'] = if ($config['docxNamingConvention']['value'] -eq 1) {
                             [io.path]::combine( $cfg['notesDocxDirectory'], "$( $pageCfg['id'] )-$( $pageCfg['lastModifiedTimeEpoch'] ).docx" )
                         }else {
                             [io.path]::combine( $cfg['notesDocxDirectory'], "$( $pageCfg['pathFromRootCompat'] ).docx" )
@@ -1100,29 +1100,29 @@ Function Convert-OneNotePage {
             if ($config['usedocx']['value'] -eq 1) {
                 # Remove any existing docx files, don't proceed if it fails
                 try {
-                    "Removing existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
+                    "Removing existing docx file: $( $pageCfg['docxExportFilePath'] )" | Write-Verbose
                     if ($config['dryRun']['value'] -eq 1) {
-                        if (Test-Path -LiteralPath $pageCfg['fullexportpath']) {
-                            Remove-Item -LiteralPath $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                        if (Test-Path -LiteralPath $pageCfg['docxExportFilePath']) {
+                            Remove-Item -LiteralPath $pageCfg['docxExportFilePath'] -Force -ErrorAction Stop
                         }
                     }
                 }catch {
-                    throw "Error removing intermediary docx file $( $pageCfg['fullexportpath'] ): $( $_.Exception.Message )"
+                    throw "Error removing intermediary docx file $( $pageCfg['docxExportFilePath'] ): $( $_.Exception.Message )"
                 }
             }
 
             # Publish OneNote page to Word, don't proceed if it fails
-            if (! (Test-Path -LiteralPath $pageCfg['fullexportpath']) ) {
+            if (! (Test-Path -LiteralPath $pageCfg['docxExportFilePath']) ) {
                 try {
-                    "Publishing new docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
+                    "Publishing new docx file: $( $pageCfg['docxExportFilePath'] )" | Write-Verbose
                     if ($config['dryRun']['value'] -eq 1) {
-                        Publish-OneNotePage -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['fullexportpath'] -PublishFormat 'pfWord'
+                        Publish-OneNotePage -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['docxExportFilePath'] -PublishFormat 'pfWord'
                     }
                 }catch {
-                    throw "Error while publishing page to docx file $( $pageCfg['fullexportpath'] ): $( $_.Exception.Message )"
+                    throw "Error while publishing page to docx file $( $pageCfg['docxExportFilePath'] ): $( $_.Exception.Message )"
                 }
             }else {
-                "Existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
+                "Existing docx file: $( $pageCfg['docxExportFilePath'] )" | Write-Verbose
             }
 
             # Publish OneNote page to pdf, don't proceed if it fails
@@ -1150,7 +1150,7 @@ Function Convert-OneNotePage {
                 # Start-Process has no way of capturing stderr / stdterr to variables, so we need to use temp files.
                 "Converting docx file to markdown file: $( $pageCfg['filePath'] )" | Write-Verbose
                 if ($config['dryRun']['value'] -eq 1) {
-                    $argumentList = @( '-f', 'docx', '-t', $pageCfg['conversion'], '-i', $pageCfg['fullexportpath'], '-o', $pageCfg['filePathNormal'], '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" )
+                    $argumentList = @( '-f', 'docx', '-t', $pageCfg['conversion'], '-i', $pageCfg['docxExportFilePath'], '-o', $pageCfg['filePathNormal'], '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" )
                     "Command line: pandoc.exe $argumentList" | Write-Verbose
                     $process = Start-Process -ErrorAction Stop -RedirectStandardError $stderrFile -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList $argumentList # extracts into ./media of the supplied folder
                     if ($process.ExitCode -ne 0) {
@@ -1159,7 +1159,7 @@ Function Convert-OneNotePage {
                     }
                 }
             }catch {
-                throw "Error while converting docx file $( $pageCfg['fullexportpath'] ) to markdown file $( $pageCfg['filePathNormal'] ): $( $_.Exception.Message )"
+                throw "Error while converting docx file $( $pageCfg['docxExportFilePath'] ) to markdown file $( $pageCfg['filePathNormal'] ): $( $_.Exception.Message )"
             }finally {
                 if (Test-Path $stderrFile) {
                     Remove-Item $stderrFile -Force
@@ -1169,14 +1169,14 @@ Function Convert-OneNotePage {
             # Cleanup Word files
             if ($config['keepdocx']['value'] -eq 1) {
                 try {
-                    "Removing existing docx file: $( $pageCfg['fullexportpath'] )" | Write-Verbose
+                    "Removing existing docx file: $( $pageCfg['docxExportFilePath'] )" | Write-Verbose
                     if ($config['dryRun']['value'] -eq 1) {
-                        if (Test-Path -LiteralPath $pageCfg['fullexportpath']) {
-                            Remove-Item -LiteralPath $pageCfg['fullexportpath'] -Force -ErrorAction Stop
+                        if (Test-Path -LiteralPath $pageCfg['docxExportFilePath']) {
+                            Remove-Item -LiteralPath $pageCfg['docxExportFilePath'] -Force -ErrorAction Stop
                         }
                     }
                 }catch {
-                    Write-Error "Error removing intermediary docx file $( $pageCfg['fullexportpath'] ): $( $_.Exception.Message )"
+                    Write-Error "Error removing intermediary docx file $( $pageCfg['docxExportFilePath'] ): $( $_.Exception.Message )"
                 }
             }
 

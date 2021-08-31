@@ -883,7 +883,7 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             $pageCfg['mediaPath'] | Should -Match $regex
             $pageCfg['mediaParentPathPandoc'] | Should -Be $pageCfg['tmpPath'].Replace([io.path]::DirectorySeparatorChar, '/')
             $pageCfg['mediaPathPandoc'] | Should -Be $( [io.path]::combine($pageCfg['tmpPath'], 'media').Replace([io.path]::DirectorySeparatorChar, '/') )
-            $pageCfg['fullexportpath'] | Should -Match $regex
+            $pageCfg['docxExportFilePath'] | Should -Match $regex
             $pageCfg['insertedAttachments'] | ForEach-Object {
                 $_['destination'] | Should -Match $regex
             }
@@ -1015,7 +1015,7 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             $result.Count | Should -Be 48
 
             foreach ($pageCfg in $result) {
-                Split-Path $pageCfg['fullexportpath'] -Leaf | Should -Be "$( $pageCfg['id'] )-$( $pageCfg['lastModifiedTimeEpoch'] ).docx"
+                Split-Path $pageCfg['docxExportFilePath'] -Leaf | Should -Be "$( $pageCfg['id'] )-$( $pageCfg['lastModifiedTimeEpoch'] ).docx"
             }
 
             $params['Config']['docxNamingConvention']['value'] = 2
@@ -1026,7 +1026,7 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
             $result.Count | Should -Be 48
 
             foreach ($pageCfg in $result) {
-                Split-Path $pageCfg['fullexportpath'] -Leaf | Should -Be "$( $pageCfg['pathFromRootCompat'] ).docx"
+                Split-Path $pageCfg['docxExportFilePath'] -Leaf | Should -Be "$( $pageCfg['pathFromRootCompat'] ).docx"
             }
         }
 
