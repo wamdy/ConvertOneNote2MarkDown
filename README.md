@@ -192,11 +192,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Credits
 
-Credit for this script goes to the wizard [@SjoerdV](https://github.com/SjoerdV) who created the original script [here](https://github.com/SjoerdV/ConvertOneNote2MarkDown). [ then made a variety of modifications and improvements on his fork. The fork was transferred to and is now maintained by
-
 * Avi Aryan for the awesome [VSCodeNotebook](https://github.com/aviaryan/VSCodeNotebook) port
 * [@SjoerdV](https://github.com/SjoerdV) for the [original script](https://github.com/SjoerdV/ConvertOneNote2MarkDown)
-* [@nixsee](https://github.com/nixsee) who made a variety of modifications and improvements on the fork
+* [@nixsee](https://github.com/nixsee) who made a variety of modifications and improvements on the fork, which was transferred to [@theohbrothers](https://github.com/theohbrothers)
 
 <!--
 title:  'Convert OneNote to MarkDown'
