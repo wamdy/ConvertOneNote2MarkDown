@@ -1091,7 +1091,7 @@ Function Convert-OneNotePage {
                         $item = New-Item -Path $d -ItemType Directory -Force -ErrorAction Stop
                     }
                 }catch {
-                    throw "Failed to create directory '$d': $( $_.Exception.Message )"
+                    throw "Failed to create directory $d. Exception: $( $_.Exception.Message )"
                 }
             }
 
@@ -1105,7 +1105,7 @@ Function Convert-OneNotePage {
                         }
                     }
                 }catch {
-                    throw "Error removing intermediary docx file $( $pageCfg['docxExportFilePath'] ): $( $_.Exception.Message )"
+                    throw "Error removing intermediary docx file $( $pageCfg['docxExportFilePath'] ). Exception: $( $_.Exception.Message )"
                 }
             }
 
@@ -1117,7 +1117,7 @@ Function Convert-OneNotePage {
                         Publish-OneNotePage -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['docxExportFilePath'] -PublishFormat 'pfWord'
                     }
                 }catch {
-                    throw "Error while publishing page to docx file $( $pageCfg['docxExportFilePath'] ): $( $_.Exception.Message )"
+                    throw "Error while publishing page to docx file $( $pageCfg['docxExportFilePath'] ). Exception: $( $_.Exception.Message )"
                 }
             }else {
                 "Existing docx file: $( $pageCfg['docxExportFilePath'] )" | Write-Verbose
@@ -1134,7 +1134,7 @@ Function Convert-OneNotePage {
                         }
                         "pdf file ready: $( $pageCfg['pdfExportFilePath'] )" | Write-Host -ForegroundColor Green
                     }catch {
-                        throw "Error while publishing page to pdf file $( $pageCfg['pdfExportFilePath'] ): $( $_.Exception.Message )"
+                        throw "Error while publishing page to pdf file $( $pageCfg['pdfExportFilePath'] ). Exception: $( $_.Exception.Message )"
                     }
                 }else {
                     "Existing pdf file: $( $pageCfg['pdfExportFilePath'] )" | Write-Host -ForegroundColor Green
@@ -1157,7 +1157,7 @@ Function Convert-OneNotePage {
                     }
                 }
             }catch {
-                throw "Error while converting docx file $( $pageCfg['docxExportFilePath'] ) to markdown file $( $pageCfg['filePathNormal'] ): $( $_.Exception.Message )"
+                throw "Error while converting docx file $( $pageCfg['docxExportFilePath'] ) to markdown file $( $pageCfg['filePathNormal'] ). Exception: $( $_.Exception.Message )"
             }finally {
                 if (Test-Path $stderrFile) {
                     Remove-Item $stderrFile -Force
@@ -1174,7 +1174,7 @@ Function Convert-OneNotePage {
                         }
                     }
                 }catch {
-                    Write-Error "Error removing intermediary docx file $( $pageCfg['docxExportFilePath'] ): $( $_.Exception.Message )"
+                    Write-Error "Error removing intermediary docx file $( $pageCfg['docxExportFilePath'] ). Exception: $( $_.Exception.Message )"
                 }
             }
 
@@ -1186,7 +1186,7 @@ Function Convert-OneNotePage {
                         Copy-Item -Path $attachmentCfg['source'] -Destination $attachmentCfg['destination'] -Force -ErrorAction Stop
                     }
                 }catch {
-                    Write-Error "Error while saving attachment from $( $attachmentCfg['source'] ) to $( $attachmentCfg['destination'] ): $( $_.Exception.Message )"
+                    Write-Error "Error while saving attachment from $( $attachmentCfg['source'] ) to $( $attachmentCfg['destination'] ). Exception: $( $_.Exception.Message )"
                 }
             }
 
@@ -1207,7 +1207,7 @@ Function Convert-OneNotePage {
                             $item = Move-Item -Path "$( $image.FullName )" -Destination $newimagePath -Force -ErrorAction Stop -PassThru
                         }
                     }catch {
-                        Write-Error "Error while renaming image $( $image.FullName ) to $( $item.FullName ): $( $_.Exception.Message )"
+                        Write-Error "Error while renaming image $( $image.FullName ) to $( $item.FullName ). Exception: $( $_.Exception.Message )"
                     }
                     # Change MD file Image filename References
                     try {
@@ -1218,7 +1218,7 @@ Function Convert-OneNotePage {
                             Set-ContentNoBom -LiteralPath $pageCfg['filePath'] -Value $content -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                         }
                     }catch {
-                        Write-Error "Error while renaming image file name references to '$( $newimageName ): $( $_.Exception.Message )"
+                        Write-Error "Error while renaming image file name references to $( $newimageName ). Exception: $( $_.Exception.Message )"
                     }
                 }
             }
@@ -1248,7 +1248,7 @@ Function Convert-OneNotePage {
                                 $content = $content -replace $r['searchRegex'], $r['replacement']
                             }
                         }catch {
-                            Write-Error "Failed to mutating markdown content with mutation '$( $m['description'] )': $( $_.Exception.Message )"
+                            Write-Error "Failed to mutating markdown content with mutation '$( $m['description'] )'. Exception: $( $_.Exception.Message )"
                         }
                     }
                 }
@@ -1261,8 +1261,8 @@ Function Convert-OneNotePage {
 
             "Markdown file ready: $( $pageCfg['filePathNormal'] )" | Write-Host -ForegroundColor Green
         }catch {
-            Write-Host "Failed to convert page: $( $pageCfg['pathFromRoot'] ). Reason: $( $_.Exception.Message )" -ForegroundColor Red
-            Write-Error "Failed to convert page: $( $pageCfg['pathFromRoot'] ). Reason: $( $_.Exception.Message )"
+            Write-Host "Failed to convert page: $( $pageCfg['pathFromRoot'] ). Exception: $( $_.Exception.Message )" -ForegroundColor Red
+            Write-Error "Failed to convert page: $( $pageCfg['pathFromRoot'] ). Exception: $( $_.Exception.Message )"
         }
     }
 }
