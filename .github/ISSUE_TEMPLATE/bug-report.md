@@ -22,8 +22,6 @@ Describe the unexpected behavior.
 
 **Output of Configuration**
 
-For example:
-
 ```powershell
 Configuration:
 dryRun: 1
@@ -42,8 +40,6 @@ newlineCharacter: 2
 ```
 
 **Output of `$PSVersionTable`**
-
-For example:
 
 ```powershell
 PS > $PSVersionTable
