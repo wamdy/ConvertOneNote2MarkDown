@@ -123,6 +123,20 @@ Cause: Mismatch in security contexts of Powershell and OneNote.
 
 Solution: Ensure both Powershell and OneNote are run under the same user privileges. An easy way is to run both Powershell and OneNote as Administrator.
 
+### Error: `Exception calling "Publish" with "4" argument(s): "Class not registered"`
+
+Solution: Ensure Microsoft Word is installed.
+
+### Error: `Exception calling "Publish" with "4" argument(s): "The remote procedure call failed. (Exception from HRESULT: 0x800706BE)`
+
+Cause: Page content bug.
+
+Solution: Create a new section, copy pages into it, run the script again. See [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/112#issuecomment-986947168).
+
+### Error: `Exception 0x80042006`
+
+Solution: Use an absolute path for `$notesdestpath`.
+
 ## Changelog
 
 All notable changes to this project will be documented in this file.
