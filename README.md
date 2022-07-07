@@ -75,9 +75,9 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
     ```.\ConvertOneNote2MarkDown-v2.ps1```
     * If you would like to see detailed logs about the conversion process, use the `-Verbose` switch:
     ```.\ConvertOneNote2MarkDown-v2.ps1 -Verbose```
-    * If you have trouble, try running both Onenote and Powershell as an administrator.
-    * If you receive an error, try running this line to bypass security:
-    ``Set-ExecutionPolicy Bypass -Scope Process``
+    * If you see an error about scripts being blocked, run this line (don't worry, this only allows the current powershell process to bypass security):
+    ``Set-ExecutionPolicy Bypass -Scope Process -Force``
+    * If you see any other [common errors](#common-errors), try running both Onenote and Powershell as an administrator.
 1. If you chose to use a configuration file `config.ps1`, skip to the next step. If you did not choose to use a configuration file, the script will ask you for configuration interactively.
     * It starts off asking whether to do a dry run. This is useful for trying out different settings until you find one you like.
     * It will ask you for the path to store the markdown folder structure. Please use an empty folder. If using VS Code, you might not be able to paste the filepath - right click on the blinking cursor and it will paste from clipboard. Use a full absolute path.
@@ -108,6 +108,20 @@ If you are satisfied check the results with a markdown editor like VSCode. All i
 ```
 
 > NOTE: The bottom three are not really markdown related but are quite obvious.
+
+## Common errors
+
+### Error: `80080005 Server execution failed (Exception from HRESULT: 0x80080005(CO_E_SERVER_EXEC_FAILURE)`
+
+Cause: Mismatch in security contexts of Powershell and OneNote.
+
+Solution: Ensure both Powershell and OneNote are run under the same user privileges. An easy way is to run both Powershell and OneNote as Administrator.
+
+### Error: `Unable to find type [Microsoft.Office.InterOp.OneNote.HierarchyScope]`
+
+Cause: Mismatch in security contexts of Powershell and OneNote.
+
+Solution: Ensure both Powershell and OneNote are run under the same user privileges. An easy way is to run both Powershell and OneNote as Administrator.
 
 ## Changelog
 
