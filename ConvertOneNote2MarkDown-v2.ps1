@@ -119,7 +119,9 @@ Whether to store media in single or multiple folders
         }
         conversion = @{
             description = @'
-Specify Pandoc output format and optional extensions in the format: <format><+extension><-extension>. See: https://pandoc.org/MANUAL.html#options
+Specify Pandoc output format and optional extension(s) in the format: <format><+extension><-extension>
+Extension(s) must be supported by your pandoc version
+See: https://pandoc.org/MANUAL.html#options
 Examples:
   markdown-simple_tables-multiline_tables-grid_tables+pipe_tables
   commonmark+pipe_tables
