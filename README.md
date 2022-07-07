@@ -57,7 +57,7 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
 
 * Microsoft Word >= 2016 (To be clear, this is the Desktop version NOT the Windows Store version. Can be installed with Office 365 Trial - https://www.microsoft.com/en-us/microsoft-365/try).
 
-* [PanDoc >= 2.7.2](https://pandoc.org/installing.html)
+* [PanDoc >= 2.11.2](https://pandoc.org/installing.html)
 
   * TIP: You may also use [Chocolatey](https://chocolatey.org/docs/installation#install-with-powershellexe) to install Pandoc on Windows, this will also set the right path (environment) statements. (https://chocolatey.org/packages/pandoc)
 
