@@ -10,18 +10,6 @@ on:
     branches:
     - master
 
-jobs:
-  test-powershell-5-1-windows-2016:
-    runs-on: windows-2016
-    steps:
-    - uses: actions/checkout@v2
-    - name: Powershell version
-      run: |
-        powershell -NoLogo -NonInteractive -NoProfile -Command '$PSVersionTable'
-    - name: Test
-      run: |
-        powershell -NoLogo -NonInteractive -NoProfile -Command './test/test.ps1'
-
   test-powershell-5-1-windows-2019:
     runs-on: windows-2019
     steps:
