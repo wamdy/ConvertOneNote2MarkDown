@@ -10,6 +10,7 @@ on:
     branches:
     - master
 
+jobs:
   test-powershell-5-1-windows-2019:
     runs-on: windows-2019
     steps:
@@ -114,7 +115,7 @@ on:
         pwsh -NoLogo -NonInteractive -NoProfile -Command './test/test.ps1'
 
   update-draft-release:
-    needs: [test-powershell-5-1-windows-2016, test-powershell-5-1-windows-2019, test-powershell-6-0, test-powershell-6-1, test-powershell-6-1, test-powershell-7-0, test-powershell-7-1, test-powershell-7-2]
+    needs: [test-powershell-5-1-windows-2019, test-powershell-6-0, test-powershell-6-1, test-powershell-6-1, test-powershell-7-0, test-powershell-7-1, test-powershell-7-2]
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
@@ -124,7 +125,7 @@ on:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-draft-release:
-    needs: [test-powershell-5-1-windows-2016, test-powershell-5-1-windows-2019, test-powershell-6-0, test-powershell-6-1, test-powershell-6-1, test-powershell-7-0, test-powershell-7-1, test-powershell-7-2]
+    needs: [test-powershell-5-1-windows-2019, test-powershell-6-0, test-powershell-6-1, test-powershell-6-1, test-powershell-7-0, test-powershell-7-1, test-powershell-7-2]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
