@@ -70,7 +70,7 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
     * Run the macro for each Notebook that is open
 1. It is highly recommended that you use VS Code, and its embedded Powershell terminal, as this allows you to edit and run the script, as well as check the results of the .md output all in one window.
 1. If you prefer to use a configuration file, rename `config.example.ps1` to `config.ps1` and configure options in `config.ps1` to your liking.
-   1. You may like to use `$dryRun = 2` to do a dry run first. This is useful for trying out different settings until you find one you like.
+   1. You may like to use `$dryRun = 1` to do a dry run first. This is useful for trying out different settings until you find one you like.
 1. Whatever you choose, open a PowerShell terminal and navigate to the folder containing the script and run it.
     ```.\ConvertOneNote2MarkDown-v2.ps1```
     * If you would like to see detailed logs about the conversion process, use the `-Verbose` switch:

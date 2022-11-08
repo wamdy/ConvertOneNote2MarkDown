@@ -40,7 +40,7 @@ Describe "Compile-Configuration" -Tag 'Unit' {
             Mock Get-Content {
                 # Fake content of a config.ps1
                 @'
-$dryrun = 1
+$dryrun = 0
 $notesdestpath = 'c:\temp\notes\/ ' # Deliberately add a trailing slah(es) and space
 $targetNotebook = '   ' # Deliberately add extra spaces
 $usedocx = '1'
@@ -1757,7 +1757,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
             Mock Get-Content { 'foo' }
             Mock Set-ContentNoBom { 'foo' }
 
-            $params['Config']['DryRun']['value'] = 2
+            $params['Config']['DryRun']['value'] = 1
 
             $result = Convert-OneNotePage @params 6>$null
 
