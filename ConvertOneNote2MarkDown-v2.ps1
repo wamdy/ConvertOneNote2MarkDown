@@ -33,12 +33,12 @@ Function Get-DefaultConfiguration {
         dryRun = @{
             description = @'
 Whether to do a dry run
-1: Convert - Default
-2: Convert (dry run)
+0: Convert - Default
+1: Dry run
 '@
-            default = 1
-            value = 1
-            validateRange = 1,2
+            default = 0
+            value = 0
+            validateRange = 0,1
         }
         notesdestpath = @{
             description = @'
@@ -1089,7 +1089,7 @@ Function Convert-OneNotePage {
             foreach ($d in $pageCfg['directoriesToCreate']) {
                 try {
                     "Directory: $( $d )" | Write-Verbose
-                    if ($config['dryRun']['value'] -eq 1) {
+                    if (!$config['dryRun']['value']) {
                         $item = New-Item -Path $d -ItemType Directory -Force -ErrorAction Stop
                     }
                 }catch {
@@ -1101,7 +1101,7 @@ Function Convert-OneNotePage {
                 # Remove any existing docx files, don't proceed if it fails
                 try {
                     "Removing existing docx file: $( $pageCfg['docxExportFilePath'] )" | Write-Verbose
-                    if ($config['dryRun']['value'] -eq 1) {
+                    if (!$config['dryRun']['value']) {
                         if (Test-Path -LiteralPath $pageCfg['docxExportFilePath']) {
                             Remove-Item -LiteralPath $pageCfg['docxExportFilePath'] -Force -ErrorAction Stop
                         }
@@ -1115,7 +1115,7 @@ Function Convert-OneNotePage {
             if (! (Test-Path -LiteralPath $pageCfg['docxExportFilePath']) ) {
                 try {
                     "Publishing new docx file: $( $pageCfg['docxExportFilePath'] )" | Write-Verbose
-                    if ($config['dryRun']['value'] -eq 1) {
+                    if (!$config['dryRun']['value']) {
                         Publish-OneNotePage -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['docxExportFilePath'] -PublishFormat 'pfWord'
                     }
                 }catch {
@@ -1130,7 +1130,7 @@ Function Convert-OneNotePage {
                 if (! (Test-Path -LiteralPath $pageCfg['pdfExportFilePath']) ) {
                     try {
                         "Publishing new pdf file: $( $pageCfg['pdfExportFilePath'] )" | Write-Verbose
-                        if ($config['dryRun']['value'] -eq 1) {
+                        if (!$config['dryRun']['value']) {
                             Publish-OneNotePage -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['pdfExportFilePathTmp'] -PublishFormat 'pfPdf'
                             Move-Item $pageCfg['pdfExportFilePathTmp'] $pageCfg['pdfExportFilePath']
                         }
@@ -1149,7 +1149,7 @@ Function Convert-OneNotePage {
             try {
                 # Start-Process has no way of capturing stderr / stdterr to variables, so we need to use temp files.
                 "Converting docx file to markdown file: $( $pageCfg['filePath'] )" | Write-Verbose
-                if ($config['dryRun']['value'] -eq 1) {
+                if (!$config['dryRun']['value']) {
                     $argumentList = @( '-f', 'docx', '-t', $pageCfg['conversion'], '-i', $pageCfg['docxExportFilePath'], '-o', $pageCfg['filePathNormal'], '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" )
                     "Command line: pandoc.exe $argumentList" | Write-Verbose
                     $process = Start-Process -ErrorAction Stop -RedirectStandardError $stderrFile -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList $argumentList # extracts into ./media of the supplied folder
@@ -1170,7 +1170,7 @@ Function Convert-OneNotePage {
             if ($config['keepdocx']['value'] -eq 1) {
                 try {
                     "Removing existing docx file: $( $pageCfg['docxExportFilePath'] )" | Write-Verbose
-                    if ($config['dryRun']['value'] -eq 1) {
+                    if (!$config['dryRun']['value']) {
                         if (Test-Path -LiteralPath $pageCfg['docxExportFilePath']) {
                             Remove-Item -LiteralPath $pageCfg['docxExportFilePath'] -Force -ErrorAction Stop
                         }
@@ -1184,7 +1184,7 @@ Function Convert-OneNotePage {
             foreach ($attachmentCfg in $pageCfg['insertedAttachments']) {
                 try {
                     "Saving inserted attachment: $( $attachmentCfg['destination'] )" | Write-Verbose
-                    if ($config['dryRun']['value'] -eq 1) {
+                    if (!$config['dryRun']['value']) {
                         Copy-Item -Path $attachmentCfg['source'] -Destination $attachmentCfg['destination'] -Force -ErrorAction Stop
                     }
                 }catch {
@@ -1193,7 +1193,7 @@ Function Convert-OneNotePage {
             }
 
             # Rename images to have unique names - NoteName-Image#-HHmmssff.xyz
-            if ($config['dryRun']['value'] -eq 1) {
+            if (!$config['dryRun']['value']) {
                 $images = Get-ChildItem -Path $pageCfg['mediaPathPandoc'] -Recurse -Force -ErrorAction SilentlyContinue
                 foreach ($image in $images) {
                     # Rename Image
@@ -1205,7 +1205,7 @@ Function Convert-OneNotePage {
                         }
                         $newimagePath = [io.path]::combine( $pageCfg['mediaPath'], $newimageName )
                         "Moving image: $( $image.FullName ) to $( $newimagePath )" | Write-Verbose
-                        if ($config['dryRun']['value'] -eq 1) {
+                        if (!$config['dryRun']['value']) {
                             $item = Move-Item -Path "$( $image.FullName )" -Destination $newimagePath -Force -ErrorAction Stop -PassThru
                         }
                     }catch {
@@ -1214,7 +1214,7 @@ Function Convert-OneNotePage {
                     # Change MD file Image filename References
                     try {
                         "Mutation of markdown: Rename image references to unique name. Find '$( $image.Name )', Replacement: '$( $newimageName )'" | Write-Verbose
-                        if ($config['dryRun']['value'] -eq 1) {
+                        if (!$config['dryRun']['value']) {
                             $content = Get-Content -LiteralPath $pageCfg['filePath'] -Raw -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                             $content = $content.Replace("$($image.Name)", "$($newimageName)")
                             Set-ContentNoBom -LiteralPath $pageCfg['filePath'] -Value $content -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
@@ -1227,7 +1227,7 @@ Function Convert-OneNotePage {
 
             # Mutate markdown content
             try {
-                if ($config['dryRun']['value'] -eq 1) {
+                if (!$config['dryRun']['value']) {
                     # Get markdown content
                     $content = @( Get-Content -LiteralPath $pageCfg['filePath'] -ErrorAction Stop ) # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                     $content = @(
@@ -1246,7 +1246,7 @@ Function Convert-OneNotePage {
                     foreach ($r in $m['replacements']) {
                         try {
                             "Mutation of markdown: $( $m['description'] ). Regex: '$( $r['searchRegex'] )', Replacement: '$( $r['replacement'].Replace("`r", '\r').Replace("`n", '\n') )'" | Write-Verbose
-                            if ($config['dryRun']['value'] -eq 1) {
+                            if (!$config['dryRun']['value']) {
                                 $content = $content -replace $r['searchRegex'], $r['replacement']
                             }
                         }catch {
@@ -1254,7 +1254,7 @@ Function Convert-OneNotePage {
                         }
                     }
                 }
-                if ($config['dryRun']['value'] -eq 1) {
+                if (!$config['dryRun']['value']) {
                     Set-ContentNoBom -LiteralPath $pageCfg['filePath'] -Value $content -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                 }
             }catch {

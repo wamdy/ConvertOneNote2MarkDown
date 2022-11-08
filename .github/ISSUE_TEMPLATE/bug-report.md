@@ -24,7 +24,7 @@ Describe the unexpected behavior.
 
 ```powershell
 Configuration:
-dryRun: 1
+dryRun: 0
 notesdestpath: C:\temp\notes
 targetNotebook: test
 usedocx: 2
