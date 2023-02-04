@@ -8,6 +8,17 @@ Describe "Validate-Dependencies" -Tag 'Unit' {
 
     Context 'Behavior' {
 
+        It "Throws exception when Powershell version is not supported" {
+            Mock Get-Item {}
+            Mock Get-Command { $true }
+
+            if ($PSVersionTable.PSVersion -ge [version]'7.1') {
+                { Validate-Dependencies } | Should -Throw "Unsupported Powershell version"
+            }else {
+                { Validate-Dependencies } | Should -Not -Throw
+            }
+        }
+
         It "Warn when GAC assemblies are missing (Windows)" {
             Mock Get-Item {}
             Mock Write-Warning { 'a warning' }

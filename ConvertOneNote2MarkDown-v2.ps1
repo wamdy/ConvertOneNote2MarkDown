@@ -13,6 +13,11 @@ Function Validate-Dependencies {
     [CmdletBinding()]
     param ()
 
+    # Validate Powershell versions. Supported version are between 5.x (possibly lower) and 7.0.x
+    if ($PSVersionTable.PSVersion -ge [version]'7.1') {
+        throw "Unsupported Powershell version $( $PSVersionTable.PSVersion ). Supported versions are between Powershell 5.x and 7.0.x. See README.md for instructions to install Powershell 7.0.x"
+    }
+
     # Validate assemblies
     if ( ($env:OS -imatch 'Windows') -and ! (Get-Item -Path $env:windir\assembly\GAC_MSIL\*onenote*) ) {
         "There are missing onenote assemblies. Please ensure the Desktop version of Onenote 2016 or above is installed." | Write-Warning
@@ -535,7 +540,7 @@ Function New-OneNoteConnection {
             throw "Failed to make connection to OneNote."
         }
     }else {
-        # Works between powershell 6.0 and 7.0, but not >= 7.1
+        # Works between powershell 5.x (possibly lower) and 7.0, but not >= 7.1. 7.1 and above doesn't seem to support loading Win32 GAC Assemblies.
         if (Add-Type -Path $env:windir\assembly\GAC_MSIL\Microsoft.Office.Interop.OneNote\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.OneNote.dll -PassThru) {
             $OneNote = [Microsoft.Office.Interop.OneNote.ApplicationClass]::new()
             $OneNote
