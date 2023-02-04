@@ -51,7 +51,7 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
 
 * Windows >= 10
 
-* Windows Powershell 5.x and above, or [Powershell Core 6.x up to 7.0](https://github.com/PowerShell/PowerShell)
+* Windows Powershell 5.x and above, or [Powershell Core 6.x up to 7.0.x](#q-how-to-install-and-run-powershell-70x)
 
 * Microsoft OneNote >= 2016 (To be clear, this is the Desktop version NOT the Windows Store version. Can be downloaded for FREE here - https://www.onenote.com/Download)
 
@@ -77,7 +77,7 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
     ```.\ConvertOneNote2MarkDown-v2.ps1 -Verbose```
     * If you see an error about scripts being blocked, run this line (don't worry, this only allows the current powershell process to bypass security):
     ``Set-ExecutionPolicy Bypass -Scope Process -Force``
-    * If you see any other [common errors](#common-errors), try running both Onenote and Powershell as an administrator.
+    * If you see any other [common errors](#faq), try running both Onenote and Powershell as an administrator.
 1. If you chose to use a configuration file `config.ps1`, skip to the next step. If you did not choose to use a configuration file, the script will ask you for configuration interactively.
     * It starts off asking whether to do a dry run. This is useful for trying out different settings until you find one you like.
     * It will ask you for the path to store the markdown folder structure. Please use an empty folder. If using VS Code, you might not be able to paste the filepath - right click on the blinking cursor and it will paste from clipboard. Use a full absolute path.
@@ -109,7 +109,25 @@ If you are satisfied check the results with a markdown editor like VSCode. All i
 
 > NOTE: The bottom three are not really markdown related but are quite obvious.
 
-## Common errors
+## FAQ
+
+### Q: How to install and run Powershell 7.0.x?
+
+A: To install Powershell `7.0.13` (the highest supported version of Powershell) without overridding any existing version of Powershell Core on your system, download [PowerShell-7.0.13-win-x64.zip](https://github.com/PowerShell/PowerShell/releases/download/v7.0.13/PowerShell-7.0.13-win-x64.zip) (validate its checksum [here](https://github.com/PowerShell/PowerShell/releases/v7.0.13)), extract it to a directory `C:\PowerShell-7.0.13-win-x64`, and run `C:\PowerShell-7.0.13-win-x64\pwsh.exe`.
+
+To uninstall after your are done converting, simply delete the `C:\PowerShell-7.0.13-win-x64` directory.
+
+### Error: `Unsupported Powershell version`
+
+Cause: Powershell `7.1.x` and above does not support loading Win32 GAC Assemblies.
+
+Solution: Use a version of Powershell between `5.x` and `7.0.x`. See [here](#q-how-to-install-and-run-powershell-70x).
+
+### Error: `Error HRESULT E_FAIL has been returned from a call to a COM component`
+
+Cause: Powershell `7.1.x` and above does not support loading Win32 GAC Assemblies.
+
+Solution: Use a version of Powershell between `5.x` and `7.0.x`. See [here](#q-how-to-install-and-run-powershell-70x).
 
 ### Error: `80080005 Server execution failed (Exception from HRESULT: 0x80080005(CO_E_SERVER_EXEC_FAILURE)`
 
