@@ -51,7 +51,10 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
 
 * Windows >= 10
 
-* Windows Powershell 5.x and above, or [Powershell Core 6.x up to 7.0.x](#q-how-to-install-and-run-powershell-70x)
+* Windows Powershell 5.x, or [Powershell Core 6.x up to 7.0.x](#q-how-to-install-and-run-powershell-70x).
+
+  * Note: There is no need to install Windows Powershell, since it is already included in Windows 10 / 11 (click Start > `Windows Powershell`). Installing Powershell Core is optional.
+  * Note: Do not use Windows Powershell ISE, because it [does not support long paths](#error-convert-onenotepage--error-while-renaming-image-file-name-references-to-xxxpng-illegal-characters-in-path).
 
 * Microsoft OneNote >= 2016 (To be clear, this is the Desktop version NOT the Windows Store version. Can be downloaded for FREE here - https://www.onenote.com/Download)
 
@@ -154,6 +157,12 @@ Solution: Create a new section, copy pages into it, run the script again. See [c
 ### Error: `Exception 0x80042006`
 
 Solution: Use an absolute path for `$notesdestpath`.
+
+### Error: `Convert-OneNotePage : Error while renaming image file name references to 'xxx.png: Illegal characters in path.`
+
+Cause: Windows Powershell ISE does not support long paths using the [`\\?\`](https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN#maxpath) prefix, e.g. `\\?\C:\path\to`.
+
+Solution: Do not use Window Powershell ISE. Use Windows Powershell, or Powershell Core. See [requirements](#requirements).
 
 ## Credits
 
