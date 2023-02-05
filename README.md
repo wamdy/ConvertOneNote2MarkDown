@@ -87,7 +87,10 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
     *  Read the prompts carefully to select your desired options. If you aren't actively editing your pages in Onenote, it is HIGHLY recommended that you don't delete the intermediate word docs, as they take 80+% of the time to generate. They are stored in their own folder, out of the way. You can then quickly re-run the script with different parameters until you find what you like.
 1. Sit back and wait until the process completes
 1. To stop the process at any time, press Ctrl+C.
-1. If you like, you can inspect some of the .md files prior to completion. If you're not happy with the results, stop the process, delete the .md and media folders and re-run with different parameters.
+1. If you like, you can inspect some of the .md files prior to completion. If you're not happy with the results, stop the process, delete the .md and media folders and re-run with different configuration options.
+   * If you want to convert to Obsidian Markdown, try using `$conversion = 'markdown-simple_tables-multiline_tables-grid_tables+pipe_tables-bracketed_spans+native_spans+startnum'` (see [recommendation](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/123)). Try adjusting the `$conversion` to get the desired markdown flavor.
+   * If you want to convert to GitHub Flavored Markdown, try using `$conversion = 'gfm+pipe_tables-raw_html'` (see [recommendation](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/145)).
+   * If you do not want the line of image dimensions after each image, e.g. `{width="12.072916666666666in" height="6.65625in"}` in markdown, try using `$conversion = 'gfm+pipe_tables-raw_html'` (see [recommendation](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/145)).
 
 ## Results
 

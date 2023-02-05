@@ -49,9 +49,9 @@ $mdFileNameAndFolderNameMaxLength = 32
 # 2: Separate 'media' folder for each folder in the hierarchy
 $medialocation = 1
 
-# Specify Pandoc output format and optional extension(s) in the format: <format><+extension><-extension>
-# Extension(s) must be supported by your pandoc version
-# See: https://pandoc.org/MANUAL.html#options
+# Specify Pandoc output format and optional extension(s) in the format: <markdownformat><+extension><-extension>
+# Use this to customize the markdown flavor
+# Extension(s) must be supported by your pandoc version. See: https://pandoc.org/MANUAL.html#options
 # Examples:
 #   markdown-simple_tables-multiline_tables-grid_tables+pipe_tables
 #   commonmark+pipe_tables
