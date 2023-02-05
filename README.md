@@ -67,7 +67,7 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
 ## Usage
 
 1. Clone this repository to acquire the powershell script.
-1. Start the OneNote application
+1. Start the OneNote application. Keep OneNote open during the conversion.
 1. It is advised that you install Onetastic and the attached macro, which will automatically expand any collapsed paragraphs in the notebook. They won't be exported otherwise.
     * To install the macro, click the New Macro Button within the Onetastic Toolbar and then select File -> Import and select the .xml macro included in the release.
     * Run the macro for each Notebook that is open
@@ -153,9 +153,13 @@ Solution: Ensure Microsoft Word is installed.
 
 ### Error: `Exception calling "Publish" with "4" argument(s): "The remote procedure call failed. (Exception from HRESULT: 0x800706BE)`
 
-Cause: Page content bug.
+Cause 1: OneNote is not open during the conversion.
 
-Solution: Create a new section, copy pages into it, run the script again. See [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/112#issuecomment-986947168).
+Solution 1: Open OneNote and keep it open during the conversion.
+
+Cause 2: : Page content bug.
+
+Solution 2: Create a new section, copy pages into it, run the script again. See [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/112#issuecomment-986947168).
 
 ### Error: `Exception 0x80042006`
 
