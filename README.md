@@ -66,17 +66,24 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
 ## Usage
 
 1. Clone or [download](https://github.com/theohbrothers/ConvertOneNote2MarkDown/archive/refs/heads/master.zip) the repository to acquire the powershell script.
-1. Start the OneNote application. Keep OneNote open during the conversion.
+1. Start the OneNote application (may require opening as **Adminstrator** in some cases). Keep OneNote open during the conversion.
 1. It is advised that you install Onetastic and the attached macro, which will automatically expand any collapsed paragraphs in the notebook. They won't be exported otherwise.
     * To install the macro, click the New Macro Button within the Onetastic Toolbar and then select `File > Import` and select the `.xml` macro included in the release.
     * Run the macro for each Notebook that is open
 1. It is highly recommended that you use VS Code, and its embedded Powershell terminal, as this allows you to edit and run the script, as well as check the results of the `.md` output all in one window.
 1. If you prefer to use a configuration file, rename `config.example.ps1` to `config.ps1` and configure options in `config.ps1` to your liking.
     * You may like to use `$dryRun = 1` to do a dry run first. This is useful for trying out different settings until you find one you like.
-1. Whatever you choose, open a PowerShell terminal and navigate to the folder containing the script and run it.
+1. Whatever you choose, open Powershell as **Administrator** (or VSCode as **Administrator**, with Powershell as the integrated terminal).
+
+    * In Powershell, first navigate to the folder containing the script:
 
     ```powershell
     cd "C:\path\to\ConvertOneNote2Markdown"
+    ```
+
+    * Then run the script:
+
+    ```powershell
     .\ConvertOneNote2MarkDown-v2.ps1
     ```
 
@@ -92,7 +99,7 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
     Set-ExecutionPolicy Bypass -Scope Process -Force
     ```
 
-    * If you see any other [common errors](#faq), try running both OneNote and Powershell as an administrator.
+    * If you see any errors, check the [FAQ](#faq).
 1. If you chose to use a configuration file `config.ps1`, skip to the next step. If you did not choose to use a configuration file, the script will ask you for configuration interactively.
     * It starts off asking whether to do a dry run. This is useful for trying out different settings until you find one you like.
     * It will ask you for the path to store the markdown folder structure. Please use an empty folder. If using VS Code, you might not be able to paste the filepath - right click on the blinking cursor and it will paste from clipboard. Use a full absolute path.
@@ -153,6 +160,10 @@ A: To install Powershell `7.0.13` (the highest supported version of Powershell) 
 
 To uninstall after your are done converting, simply delete the `C:\PowerShell-7.0.13-win-x64` directory.
 
+### Q: Error(s) when opening OneNote as Administrator
+
+A: If there are errors opening OneNote as Administrator, just open it normally without Admistrator permissions. A user has reported successful conversion with only Powershell opened as Administrator. See [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/149#issuecomment-1418051753).
+
 ### Error: `Unsupported Powershell version`
 
 Cause: Powershell `7.1.x` and above does not support loading Win32 GAC Assemblies.
@@ -164,6 +175,16 @@ Solution: Use a version of Powershell between `5.x` and `7.0.x`. See [here](#q-h
 Cause: Powershell `7.1.x` and above does not support loading Win32 GAC Assemblies.
 
 Solution: Use a version of Powershell between `5.x` and `7.0.x`. See [here](#q-how-to-install-and-run-powershell-70x).
+
+### Error: `Exception 0x80042006`
+
+Cause 1: Mismatch in security contexts of Powershell and OneNote.
+
+Solution 1: Ensure both Powershell and OneNote are run under the same user privileges. An easy way is to run both Powershell and OneNote as Administrator.
+
+Cause 2: `$notesdestpath` is not an absolute path.
+
+Solution 2: Use an absolute path for `$notesdestpath`.
 
 ### Error: `80080005 Server execution failed (Exception from HRESULT: 0x80080005(CO_E_SERVER_EXEC_FAILURE)`
 
@@ -190,10 +211,6 @@ Solution 1: Open OneNote and keep it open during the conversion.
 Cause 2: : Page content bug.
 
 Solution 2: Create a new section, copy pages into it, run the script again. See [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/112#issuecomment-986947168).
-
-### Error: `Exception 0x80042006`
-
-Solution: Use an absolute path for `$notesdestpath`.
 
 ### Error: `Convert-OneNotePage : Error while renaming image file name references to 'xxx.png: Illegal characters in path.`
 
