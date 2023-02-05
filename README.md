@@ -9,10 +9,10 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
 
 ## Summary
 
+* Choose between converting a **specific notebook** or **all notebooks** in OneNote. Only notebooks which are [open and synchronized in OneNote](#q-some-notebooks-are-not-detected--converted) can be converted.
 * Choose to do a dry run or run the actual conversion.
 * Create a **folder structure** for your Notebooks and Sections
   * Process pages that are in sections at the **Notebook, Section Group and all Nested Section Group levels**
-* Choose between converting a **specific notebook** or **all notebooks**
 * Choose between creating **subfolders for subpages** (e.g. `Page\Subpage.md`) or **appending prefixes** (e.g. `Page_Subpage.md`)
 * Specify a value between `32` and `255` as the maximum length of markdown file names, and their folder names (only when using subfolders for subpages (e.g. `Page\Subpage.md`). A lower value can help avoid hitting [file and folder name limits of `255` bytes on file systems](https://en.wikipedia.org/wiki/Comparison_of_file_systems#Limits). A higher value preserves a longer page title. If using page prefixes (e.g. `Page_Subpage.md`), it is recommended to use a value of `100` or greater.
 * Choose between putting all media (images, attachments) in a central `/media` folder for each notebook, or in a separate `/media` folder in each folder of the hierarchy
@@ -162,7 +162,11 @@ To uninstall after your are done converting, simply delete the `C:\PowerShell-7.
 
 ### Q: Error(s) when opening OneNote as Administrator
 
-A: If there are errors opening OneNote as Administrator, just open it normally without Admistrator permissions. A user has reported successful conversion with only Powershell opened as Administrator. See [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/149#issuecomment-1418051753).
+A: If there are errors opening OneNote as Administrator, just open it normally without Administrator permissions. A user has reported successful conversion with only Powershell opened as Administrator. See [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/149#issuecomment-1418051753).
+
+### Q: Some notebooks are not detected / converted
+
+A: The script cannot detect notebooks which are not yet open in OneNote. Use `File > Open` in OneNote to open all OneNote notebooks that you want to convert, and ensure they are all fully synchronized before running the conversion. This applies to local OneNote notebooks and cloud OneNote notebooks (E.g. OneDrive or Microsoft Teams).
 
 ### Error: `Unsupported Powershell version`
 
@@ -175,16 +179,6 @@ Solution: Use a version of Powershell between `5.x` and `7.0.x`. See [here](#q-h
 Cause: Powershell `7.1.x` and above does not support loading Win32 GAC Assemblies.
 
 Solution: Use a version of Powershell between `5.x` and `7.0.x`. See [here](#q-how-to-install-and-run-powershell-70x).
-
-### Error: `Exception 0x80042006`
-
-Cause 1: Mismatch in security contexts of Powershell and OneNote.
-
-Solution 1: Ensure both Powershell and OneNote are run under the same user privileges. An easy way is to run both Powershell and OneNote as Administrator.
-
-Cause 2: `$notesdestpath` is not an absolute path.
-
-Solution 2: Use an absolute path for `$notesdestpath`.
 
 ### Error: `80080005 Server execution failed (Exception from HRESULT: 0x80080005(CO_E_SERVER_EXEC_FAILURE)`
 
@@ -200,9 +194,35 @@ Solution: Ensure both Powershell and OneNote are run under the same user privile
 
 ### Error: `Exception calling "Publish" with "4" argument(s): "Class not registered"`
 
+Cause: Microsoft Word is not installed.
+
 Solution: Ensure Microsoft Word is installed.
 
-### Error: `Exception calling "Publish" with "4" argument(s): "The remote procedure call failed. (Exception from HRESULT: 0x800706BE)`
+### Error: `Exception: Exception calling "Publish" with "4" argument(s): "Server execution failed  Server execution failed"`
+
+Cause: Microsoft Word plugin(s) causing publishing to `.docx` to fail. E.g. `zotero` plugin (see [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/149#issuecomment-1418051753)).
+
+Solution: Disable all Microsoft Word plugins before running the conversion.
+
+### Error: `Exception: Exception calling "Publish" with "4" argument(s): "0x80042006"`
+
+Cause 1: Mismatch in security contexts of Powershell and OneNote.
+
+Solution 1: Ensure both Powershell and OneNote are run under the same user privileges. An easy way is to run both Powershell and OneNote as Administrator.
+
+Cause 2: `$notesdestpath` is not an absolute path.
+
+Solution 2: Use an absolute path for `$notesdestpath`.
+
+### Error: `Exception calling "Publish" with "4" argument(s): "The RPC server is unavailable. (Exception from HRESULT: 0x800706BA)"`
+
+Cause: Windows Defender could be blocking `pandoc.exe`. See [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/11#issuecomment-835081893).
+
+Solution: Disable Windows Defender. Click `Start > Windows Security`, under `Virus and threat protection > Exclusions` click `Add or remove exclusions`, click `Add an exclusion` and browse to `C:\Program Files\Pandoc\pandoc.exe`. Then retry the conversion.
+
+If `pandoc.exe` is still blocked, you might try to turn off settings under `Virus and threat protection`, `App and browser control`, and `Device Security`.
+
+### Error: `Exception calling "Publish" with "4" argument(s): "The remote procedure call failed. (Exception from HRESULT: 0x800706BE)"`
 
 Cause 1: OneNote is not open during the conversion.
 
