@@ -152,9 +152,9 @@ Whether to include page timestamp and separator at top of document
         }
         keepspaces = @{
             description = @'
-Whether to clear double spaces between bullets, non-breaking spaces from blank lines, and '>` after bullet lists
-1: Clear double spaces in bullets - Default
-2: Keep double spaces
+Whether to clear extra newlines between unordered (bullet) and ordered (numbered) list items, non-breaking spaces from blank lines, and `>` after unordered lists
+1: Clear - Default
+2: Don't clear
 '@
             default = 1
             value = 1
@@ -928,18 +928,24 @@ Function New-SectionGroupConversionConfig {
                             }
                             if ($config['keepspaces']['value'] -eq 1 ) {
                                 @{
-                                    description = 'Clear double spaces from bullets and non-breaking spaces spaces from blank lines'
+                                    description = 'Clear extra newlines between unordered (bullet) and ordered (numbered) list items, non-breaking spaces from blank lines, and `>` after unordered lists'
                                     replacements = @(
+                                        # Remove non-breaking spaces
                                         @{
                                             searchRegex = [regex]::Escape([char]0x00A0)
                                             replacement = ''
                                         }
-                                        # Remove a newline between each occurrence of '- some list item'
+                                        # Remove an extra newline between each occurrence of '- some unordered list item'
                                         @{
-                                            searchRegex = '\r*\n\r*\n(\s*)- '
-                                            replacement = "`n`$1- "
+                                            searchRegex = '(\s*)- ([^\r\n]*)\r*\n\r*\n(?=\s*-)'
+                                            replacement = "`$1- `$2`n"
                                         }
-                                        # Remove all '>' occurrences immediately following bullet lists
+                                        # Remove an extra newline between each occurrence of '1. some ordered list item'
+                                        @{
+                                            searchRegex = '(\s*)(\d+\.) ([^\r\n]*)\r*\n\r*\n(?=\s*\d+\.)'
+                                            replacement = "`$1`$2 `$3`n"
+                                        }
+                                        # Remove all '>' occurrences immediately following unordered lists
                                         @{
                                             searchRegex = '\n>[ ]*'
                                             replacement = "`n"
