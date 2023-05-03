@@ -1190,6 +1190,7 @@ Describe 'New-SectionGroupConversionConfig' -Tag 'Unit' {
 
             $fakeMarkdownContent = @"
 hello world$( [char]0x00A0 )
+
 - foo
 
   - foo1
@@ -1198,9 +1199,29 @@ hello world$( [char]0x00A0 )
 
   - bar1
 
+- baz
+
+  - baz1
+
 >
 >
 > some other text
+
+1. foo
+
+    1. foo1
+
+2. bar
+
+    1. bar1
+
+3. baz
+
+    1. baz1
+
+some new paragraph
+some more
+
 "@ -replace "`r", '' # On some Windows Powershell 5 versions, a here-string will contain `\r`, so let's ensure that doesn't happen.
 
             foreach ($pageCfg in $result) {
@@ -1212,19 +1233,33 @@ hello world$( [char]0x00A0 )
                     }
                 }
 
-                # Should remove newlines between bullets, and remove non-breaking spaces. Ignore first 8 lines for page header
+                # Should remove extra newline between unordered and ordered lists, remove non-breaking spaces, and '>' from ordered lists. Ignore first 8 lines for page header
                 $split = $mutated -split "`n"
                 $expectedBody = $split[8..($split.Count - 1)] -join "`n"
                 $expectedBody | Should -Be $( @"
 hello world
+
 - foo
   - foo1
 - bar
   - bar1
+- baz
+  - baz1
 
 
 
 some other text
+
+1. foo
+    1. foo1
+2. bar
+    1. bar1
+3. baz
+    1. baz1
+
+some new paragraph
+some more
+
 "@ -replace "`r", '') # On some Windows Powershell 5 versions, a here-string will contain `\r`, so let's ensure that doesn't happen.
             }
 
@@ -1244,23 +1279,10 @@ some other text
                     }
                 }
 
-                # Should keep newlines between bullets, and keep non-breaking spaces. Ignore first 8 lines for page header
+                # Should keep extra newline between ordered and unordered list items, keep non-breaking spaces, and `>` from ordered lists. Ignore first 8 lines for page header
                 $split = $mutated -split "`n"
                 $expectedBody = $split[8..($split.Count - 1)] -join "`n"
-                $expectedBody | Should -Be $( @"
-hello world$( [char]0x00A0 )
-- foo
-
-  - foo1
-
-- bar
-
-  - bar1
-
->
->
-> some other text
-"@ -replace "`r", '') # On some Windows Powershell 5 versions, a here-string will contain `\r`, so let's ensure that doesn't happen.
+                $expectedBody | Should -Be $fakeMarkdownContent # On some Windows Powershell 5 versions, a here-string will contain `\r`, so let's ensure that doesn't happen.
             }
 
         }

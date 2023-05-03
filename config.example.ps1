@@ -68,9 +68,9 @@ $conversion = 'markdown-simple_tables-multiline_tables-grid_tables+pipe_tables'
 # 2: Don't include
 $headerTimestampEnabled = 1
 
-# Whether to clear double spaces between bullets, non-breaking spaces from blank lines, and '>` after bullet lists
-# 1: Clear double spaces in bullets - Default
-# 2: Keep double spaces
+# Whether to clear extra newlines between unordered (bullet) and ordered (numbered) list items, non-breaking spaces from blank lines, and `>` after unordered lists
+# 1: Clear - Default
+# 2: Don't clear
 $keepspaces = 1
 
 # Whether to clear escape symbols from md files. See: https://pandoc.org/MANUAL.html#backslash-escapes
