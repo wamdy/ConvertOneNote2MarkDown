@@ -15,7 +15,7 @@ Function Validate-Dependencies {
 
     # Validate Powershell versions. Supported version are between 5.x (possibly lower) and 7.0.x
     if ($PSVersionTable.PSVersion -ge [version]'7.1') {
-        throw "Unsupported Powershell version $( $PSVersionTable.PSVersion ). Supported versions are between Powershell 5.x and 7.0.x. See README.md for instructions to install Powershell 7.0.x"
+        throw "Unsupported Powershell version $( $PSVersionTable.PSVersion ), because it does not support importing Win32 GAC Assemblies. Supported versions are between Powershell 5.x and 7.0.x. See README.md for instructions to install Powershell 7.0.x"
     }
 
     # Validate assemblies

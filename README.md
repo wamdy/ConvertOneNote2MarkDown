@@ -50,10 +50,11 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
 
 * Windows >= 10
 
-* Windows Powershell 5.x, or [Powershell Core 6.x up to 7.0.x](#q-how-to-install-and-run-powershell-70x)
+* Windows Powershell 5.x, or [Powershell Core 6.x up to 7.0.x](#q-how-to-install-and-run-powershell-70x). Note:
 
-  * Note: There is no need to install Windows Powershell, since it is already included in Windows 10 / 11 (click Start > `Windows Powershell`). Installing Powershell Core is optional.
-  * Note: Do not use Windows Powershell ISE, because it [does not support long paths](#error-convert-onenotepage--error-while-renaming-image-file-name-references-to-xxxpng-illegal-characters-in-path).
+  * Windows Powershell is already included in Windows 10 / 11 (click Start > `Windows Powershell`). Installing Powershell Core is optional.
+  * [Powershell Core 7.1 and above is unsupported](#q-why-is-powershell-core-71-and-above-unsupported).
+  * Do not use Windows Powershell ISE, because it [does not support long paths](#error-convert-onenotepage--error-while-renaming-image-file-name-references-to-xxxpng-illegal-characters-in-path).
 
 * Microsoft OneNote >= 2016 (To be clear, this is the Desktop version, not the Windows Store version. Can be downloaded for free [here](https://www.onenote.com/Download)
 
@@ -160,6 +161,10 @@ A: To install Powershell `7.0.13` (the highest supported version of Powershell) 
 
 To uninstall after your are done converting, simply delete the `C:\PowerShell-7.0.13-win-x64` directory.
 
+### Q: Why is Powershell Core 7.1 and above unsupported?
+
+A: Powershell `7.1.x` and above no longer supports loading Win32 GAC Assemblies, which is needed for interacting with the OneNote Desktop APIs. It is very unlikely that Microsoft will add support for later Powershell Core versions, since Win32 is starting to become deprecated.
+
 ### Q: Error(s) when opening OneNote as Administrator
 
 A: If there are errors opening OneNote as Administrator, just open it normally without Administrator permissions. A user has reported successful conversion with only Powershell opened as Administrator. See [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/149#issuecomment-1418051753).
@@ -167,12 +172,6 @@ A: If there are errors opening OneNote as Administrator, just open it normally w
 ### Q: Some notebooks are not detected / converted
 
 A: The script cannot detect notebooks which are not yet open in OneNote. Use `File > Open` in OneNote to open all OneNote notebooks that you want to convert, and ensure they are all fully synchronized before running the conversion. This applies to local OneNote notebooks and cloud OneNote notebooks (E.g. OneDrive or Microsoft Teams).
-
-### Error: `Unsupported Powershell version`
-
-Cause: Powershell `7.1.x` and above does not support loading Win32 GAC Assemblies.
-
-Solution: Use a version of Powershell between `5.x` and `7.0.x`. See [here](#q-how-to-install-and-run-powershell-70x).
 
 ### Error: `Error HRESULT E_FAIL has been returned from a call to a COM component`
 
