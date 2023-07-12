@@ -1161,7 +1161,31 @@ Function Convert-OneNotePage {
                 # Start-Process has no way of capturing stderr / stdterr to variables, so we need to use temp files.
                 "Converting docx file to markdown file: $( $pageCfg['filePath'] )" | Write-Verbose
                 if (!$config['dryRun']['value']) {
-                    $argumentList = @( '-f', 'docx', '-t', $pageCfg['conversion'], '-i', $pageCfg['docxExportFilePath'], '-o', $pageCfg['filePathNormal'], '--wrap=none', '--markdown-headings=atx', "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )" )
+                    $argumentList = @(
+                        '-f'
+                        'docx'
+                        '-t'
+                        $pageCfg['conversion']
+                        '-i'
+                        if ($pageCfg['docxExportFilePath'] -match ' ') {
+                            "`"$( $pageCfg['docxExportFilePath'] )`"" # Add double-quotes to path containing spaces
+                        }else {
+                            $pageCfg['docxExportFilePath']
+                        }
+                        '-o'
+                        if ($pageCfg['filePathNormal'] -match ' ') {
+                            "`"$( $pageCfg['filePathNormal'] )`"" # Add double-quotes to path containing spaces
+                        }else {
+                            $pageCfg['filePathNormal']
+                        }
+                        '--wrap=none'
+                        '--markdown-headings=atx'
+                        if ($pageCfg['mediaParentPathPandoc'] -match ' ') {
+                            "`"--extract-media=$( $pageCfg['mediaParentPathPandoc'] )`"" # Add double-quotes to path containing spaces
+                        }else {
+                            "--extract-media=$( $pageCfg['mediaParentPathPandoc'] )"
+                        }
+                    )
                     "Command line: pandoc.exe $argumentList" | Write-Verbose
                     $process = Start-Process -ErrorAction Stop -RedirectStandardError $stderrFile -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList $argumentList # extracts into ./media of the supplied folder
                     if ($process.ExitCode -ne 0) {
