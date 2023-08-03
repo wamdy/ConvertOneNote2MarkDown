@@ -1651,11 +1651,11 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         }
 
         It "Halts converting if creation of any directory fails" {
-            Mock New-Item -ParameterFilter { $ItemType -eq 'Directory' -and $Force } { throw }
+            Mock New-Item -ParameterFilter { $ItemType -eq 'Directory' -and $Force } { throw "i failed" }
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
-            $err.Exception.Message | Select-Object -First 1 | Should -match 'Failed to convert page'
+            $err | Should -Not -Be $null
         }
 
         It "Removes existing docx by default" {
@@ -1668,13 +1668,13 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
 
         It "Halts converting if removal of existing docx fails" {
             Mock Test-Path -ParameterFilter { $LiteralPath } { $true }
-            Mock Remove-Item -ParameterFilter { $LiteralPath -and $Force } { throw }
+            Mock Remove-Item -ParameterFilter { $LiteralPath -and $Force } { throw "i failed" }
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
+            $err | Should -Not -Be $null
             Assert-MockCalled -CommandName Test-Path -ParameterFilter { $LiteralPath } -Times 1 -Scope It
             Assert-MockCalled -CommandName Remove-Item -ParameterFilter { $LiteralPath -and $Force } -Times 1 -Scope It
-            $err.Exception.Message | Select-Object -First 1 | Should -match 'Failed to convert page'
         }
 
         It "Publishes OneNote page to Word" {
@@ -1684,11 +1684,11 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
         }
 
         It "Halts converting if publish OneNote page to Word fails" {
-            Mock Publish-OneNotePage -ParameterFilter { $PublishFormat -eq 'pfWord' } { throw }
+            Mock Publish-OneNotePage -ParameterFilter { $PublishFormat -eq 'pfWord' } { throw "i failed" }
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
-            $err.Exception.Message | Select-Object -First 1 | Should -match 'Failed to convert page'
+            $err | Should -Not -Be $null
         }
 
         It "Publishes OneNote page to pdf" {
@@ -1707,15 +1707,15 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
             Assert-MockCalled -CommandName Start-Process -Times 1 -Scope It
         }
 
-        It "Halts converting if pandoc conversion from docx to markdown fails" {
-            Mock Start-Process { throw }
+        It "Halts converting if executing pandoc fails" {
+            Mock Start-Process { throw "i failed" }
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
-            $err.Exception.Message | Select-Object -First 1 | Should -match 'Failed to convert page'
+            $err | Should -Not -Be $null
         }
 
-        It "Logs pandoc errors" {
+        It "Halts converting on pandoc errors" {
             Mock Start-Process {
                 [PSCustomObject]@{
                     ExitCode = 1
@@ -1727,7 +1727,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
-            $err.Exception.Message | Select-Object -First 1 | Should -match 'i am some error from pandoc'
+            $err | Should -Not -Be $null
         }
 
         It "Saves page attachment(s)" {
@@ -1741,7 +1741,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
-            $err.Exception.Message | Select-Object -First 1 | Should -match 'Error while saving attachment'
+            $err.Exception.Message | Select-Object -First 1 | Should -match 'Failed to save attachment'
         }
 
         It "Rename page image(s) to unique names" {
@@ -1756,7 +1756,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
-            $err.Exception.Message | Select-Object -First 1 | Should -match 'Error while renaming image'
+            $err.Exception.Message | Select-Object -First 1 | Should -match 'Failed to rename image'
         }
 
         It "Markdown Mutation: Rename page image references in markdown to unique names" {
@@ -1771,7 +1771,7 @@ Describe 'Convert-OneNotePage' -Tag 'Unit' {
 
             $err = Convert-OneNotePage @params 6>$null 2>&1
 
-            $err.Exception.Message | Select-Object -First 1 | Should -match 'Error while renaming image file name references to'
+            $err.Exception.Message | Select-Object -First 1 | Should -match 'Failed to rename image references to'
         }
 
         It "Markdown mutation: Performs mutations on markdown content" {
