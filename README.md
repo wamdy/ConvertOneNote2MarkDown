@@ -60,9 +60,7 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
 
 * Microsoft Word >= 2016 (To be clear, this is the Desktop version NOT the Windows Store version. Can be installed with [Office 365 Trial](https://www.microsoft.com/en-us/microsoft-365/try)
 
-* [PanDoc >= 2.11.2](https://pandoc.org/installing.html)
-
-  * Note: You may also use [Chocolatey](https://docs.chocolatey.org/en-us/choco/setup#install-with-powershell.exe) to install the [Pandoc package](https://chocolatey.org/packages/pandoc) on Windows, which will set the right path (environment) statements.
+* [Pandoc >= 2.11.2](#q-how-to-install-pandoc)
 
 ## Usage
 
@@ -164,6 +162,15 @@ To uninstall after your are done converting, simply delete the `C:\PowerShell-7.
 ### Q: Why is Powershell Core 7.1 and above unsupported?
 
 A: Powershell `7.1.x` and above no longer supports loading Win32 GAC Assemblies, which is needed for interacting with the OneNote Desktop APIs. It is very unlikely that Microsoft will add support for later Powershell Core versions, since Win32 is starting to become deprecated.
+
+### Q: How to install Pandoc?
+
+A: Pandoc can be installed in any of the following ways:
+
+* Download [pandoc Windows `.msi` installer](https://pandoc.org/installing.html). During installation, ensure **Pandoc is installed for all users** (by checking the box `Install for all users of thie machine`), which is needed for Pandoc to be available to Administrator.
+* Use [Chocolatey](https://docs.chocolatey.org/en-us/choco/setup#install-with-powershell.exe) to install the [Pandoc package](https://chocolatey.org/packages/pandoc) on Windows.
+
+After installing, ensure to **restart Powershell or the computer** for Pandoc to be set correctly in `PATH`.
 
 ### Q: Error(s) when opening OneNote as Administrator
 
