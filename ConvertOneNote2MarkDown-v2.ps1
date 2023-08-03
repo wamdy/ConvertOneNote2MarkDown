@@ -537,7 +537,8 @@ Function New-OneNoteConnection {
         if ($OneNote = New-Object -ComObject OneNote.Application) {
             $OneNote
         }else {
-            throw "Failed to make connection to OneNote."
+            Write-Error "Failed to make connection to OneNote." -ErrorAction Continue
+            throw
         }
     }else {
         # Works between powershell 5.x (possibly lower) and 7.0, but not >= 7.1. 7.1 and above doesn't seem to support loading Win32 GAC Assemblies.
@@ -545,7 +546,8 @@ Function New-OneNoteConnection {
             $OneNote = [Microsoft.Office.Interop.OneNote.ApplicationClass]::new()
             $OneNote
         }else {
-            throw "Failed to make connection to OneNote."
+            Write-Error "Failed to make connection to OneNote." -ErrorAction Continue
+            throw
         }
     }
 }
@@ -1104,7 +1106,8 @@ Function Convert-OneNotePage {
                         $item = New-Item -Path $d -ItemType Directory -Force -ErrorAction Stop
                     }
                 }catch {
-                    throw "Failed to create directory $d. Exception: $( $_.Exception.Message )"
+                    Write-Error "Failed to create directory $d" -ErrorAction Continue
+                    throw
                 }
             }
 
@@ -1118,7 +1121,8 @@ Function Convert-OneNotePage {
                         }
                     }
                 }catch {
-                    throw "Error removing intermediary docx file $( $pageCfg['docxExportFilePath'] ). Exception: $( $_.Exception.Message )"
+                    Write-Error "Failed to remove existing docx file $( $pageCfg['docxExportFilePath'] )" -ErrorAction Continue
+                    throw
                 }
             }
 
@@ -1130,7 +1134,8 @@ Function Convert-OneNotePage {
                         Publish-OneNotePage -OneNoteConnection $OneNoteConnection -PageId $pageCfg['object'].ID -Destination $pageCfg['docxExportFilePath'] -PublishFormat 'pfWord'
                     }
                 }catch {
-                    throw "Error while publishing page to docx file $( $pageCfg['docxExportFilePath'] ). Exception: $( $_.Exception.Message )"
+                    Write-Error "Failed to publish page to docx file $( $pageCfg['docxExportFilePath'] )" -ErrorAction Continue
+                    throw
                 }
             }else {
                 "Existing docx file: $( $pageCfg['docxExportFilePath'] )" | Write-Verbose
@@ -1147,7 +1152,8 @@ Function Convert-OneNotePage {
                         }
                         "pdf file ready: $( $pageCfg['pdfExportFilePath'] )" | Write-Host -ForegroundColor Green
                     }catch {
-                        throw "Error while publishing page to pdf file $( $pageCfg['pdfExportFilePath'] ). Exception: $( $_.Exception.Message )"
+                        Write-Error "Failed to publish page to pdf file $( $pageCfg['pdfExportFilePath'] )" -ErrorAction Continue
+                        throw
                     }
                 }else {
                     "Existing pdf file: $( $pageCfg['pdfExportFilePath'] )" | Write-Host -ForegroundColor Green
@@ -1190,11 +1196,12 @@ Function Convert-OneNotePage {
                     $process = Start-Process -ErrorAction Stop -RedirectStandardError $stderrFile -PassThru -NoNewWindow -Wait -FilePath pandoc.exe -ArgumentList $argumentList # extracts into ./media of the supplied folder
                     if ($process.ExitCode -ne 0) {
                         $stderr = Get-Content $stderrFile -Raw
-                        throw "pandoc failed to convert: $stderr"
+                        throw "pandoc error: $stderr"
                     }
                 }
             }catch {
-                throw "Error while converting docx file $( $pageCfg['docxExportFilePath'] ) to markdown file $( $pageCfg['filePathNormal'] ). Exception: $( $_.Exception.Message )"
+                Write-Error "Failed to convert docx file $( $pageCfg['docxExportFilePath'] ) to markdown file $( $pageCfg['filePathNormal'] )"
+                throw
             }finally {
                 if (Test-Path $stderrFile) {
                     Remove-Item $stderrFile -Force
@@ -1211,7 +1218,7 @@ Function Convert-OneNotePage {
                         }
                     }
                 }catch {
-                    Write-Error "Error removing intermediary docx file $( $pageCfg['docxExportFilePath'] ). Exception: $( $_.Exception.Message )"
+                    Write-Error "Failed to remove existing docx file $( $pageCfg['docxExportFilePath'] ). Exception: $( $_.Exception.Message )" -ErrorAction Continue
                 }
             }
 
@@ -1223,7 +1230,7 @@ Function Convert-OneNotePage {
                         Copy-Item -Path $attachmentCfg['source'] -Destination $attachmentCfg['destination'] -Force -ErrorAction Stop
                     }
                 }catch {
-                    Write-Error "Error while saving attachment from $( $attachmentCfg['source'] ) to $( $attachmentCfg['destination'] ). Exception: $( $_.Exception.Message )"
+                    Write-Error "Failed to save attachment from $( $attachmentCfg['source'] ) to $( $attachmentCfg['destination'] ). Exception: $( $_.Exception.Message )" -ErrorAction Continue
                 }
             }
 
@@ -1244,18 +1251,18 @@ Function Convert-OneNotePage {
                             $item = Move-Item -Path "$( $image.FullName )" -Destination $newimagePath -Force -ErrorAction Stop -PassThru
                         }
                     }catch {
-                        Write-Error "Error while renaming image $( $image.FullName ) to $( $item.FullName ). Exception: $( $_.Exception.Message )"
+                        Write-Error "Failed to rename image $( $image.FullName ) to $( $item.FullName ). Exception: $( $_.Exception.Message )" -ErrorAction Continue
                     }
-                    # Change MD file Image filename References
+                    # Mutate markdown content with new image references
                     try {
-                        "Mutation of markdown: Rename image references to unique name. Find '$( $image.Name )', Replacement: '$( $newimageName )'" | Write-Verbose
+                        "Mutation of markdown: Rename image references. Find: '$( $image.Name )', Replacement: '$( $newimageName )'" | Write-Verbose
                         if (!$config['dryRun']['value']) {
                             $content = Get-Content -LiteralPath $pageCfg['filePath'] -Raw -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                             $content = $content.Replace("$($image.Name)", "$($newimageName)")
                             Set-ContentNoBom -LiteralPath $pageCfg['filePath'] -Value $content -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                         }
                     }catch {
-                        Write-Error "Error while renaming image file name references to $( $newimageName ). Exception: $( $_.Exception.Message )"
+                        Write-Error "Failed to rename image references to $( $newimageName ). Exception: $( $_.Exception.Message )" -ErrorAction Continue
                     }
                 }
             }
@@ -1285,7 +1292,7 @@ Function Convert-OneNotePage {
                                 $content = $content -replace $r['searchRegex'], $r['replacement']
                             }
                         }catch {
-                            Write-Error "Failed to mutating markdown content with mutation '$( $m['description'] )'. Exception: $( $_.Exception.Message )"
+                            Write-Error "Failed to mutate markdown content with mutation '$( $m['description'] )'. Exception: $( $_.Exception.Message )"
                         }
                     }
                 }
@@ -1293,13 +1300,15 @@ Function Convert-OneNotePage {
                     Set-ContentNoBom -LiteralPath $pageCfg['filePath'] -Value $content -ErrorAction Stop # Use -LiteralPath so that characters like '(', ')', '[', ']', '`', "'", '"' are supported. Or else we will get an error "Cannot find path 'xxx' because it does not exist"
                 }
             }catch {
-                Write-Error "Error while mutating markdown content: $( $_.Exception.Message )"
+                Write-Error "Failed to mutate markdown content: $( $_.Exception.Message )"
             }
 
             "Markdown file ready: $( $pageCfg['filePathNormal'] )" | Write-Host -ForegroundColor Green
         }catch {
-            Write-Host "Failed to convert page: $( $pageCfg['pathFromRoot'] ). Exception: $( $_.Exception.Message )" -ForegroundColor Red
-            Write-Error "Failed to convert page: $( $pageCfg['pathFromRoot'] ). Exception: $( $_.Exception.Message )"
+            # Don't throw terminating errors from this function
+            Write-Error "Failed to convert page: $( $pageCfg['pathFromRoot'] )"
+            Write-Error -Message $_.Exception.Message
+            Write-Error -Message $_.ScriptStackTrace
         }
     }
 }
