@@ -24,8 +24,8 @@ Function Validate-Dependencies {
     }
 
     # Validate dependencies
-    if (! (Get-Command -Name 'pandoc.exe') ) {
-        throw "Could not locate pandoc.exe. Please ensure pandoc is installed."
+    if (! (Get-Command -Name 'pandoc.exe' -ErrorAction SilentlyContinue) ) {
+        throw "Could not locate pandoc.exe. Please ensure pandoc is installed for all users, and available in PATH. If pandoc was just installed using .msi or chocolatey, you may need to restart Powershell or the computer for pandoc to be set correctly in PATH."
     }
 }
 
