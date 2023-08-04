@@ -1305,10 +1305,13 @@ Function Convert-OneNotePage {
 
             "Markdown file ready: $( $pageCfg['filePathNormal'] )" | Write-Host -ForegroundColor Green
         }catch {
-            # Don't throw terminating errors from this function
-            Write-Error "Failed to convert page: $( $pageCfg['pathFromRoot'] )"
-            Write-Error -Message $_.Exception.Message
-            Write-Error -Message $_.ScriptStackTrace
+            Write-Error "Failed to convert page: $( $pageCfg['pathFromRoot'] )" -ErrorAction Continue
+            if ($ErrorActionPreference -eq 'Stop') {
+                throw
+            }else {
+                Write-Error -Message $_.Exception.Message
+                Write-Error -Message $_.ScriptStackTrace
+            }
         }
     }
 }
