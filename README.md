@@ -92,6 +92,12 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
     .\ConvertOneNote2MarkDown-v2.ps1 -Verbose
     ```
 
+    * By default, the script does not terminate on any errors during conversion, but it keeps continuing. If you would like the script to terminate immediately on any error it encounters, use the `-ErrorAction Stop` switch (That way, if the script finishes without errors, you can be sure the entire conversion process went perfectly):
+
+    ```powershell
+    .\ConvertOneNote2MarkDown-v2.ps1 -ErrorAction Stop
+    ```
+
     * If you see an [error about scripts being blocked on the system](#error-file-convertonenote2markdownps1-cannot-be-loaded-because-running-scripts-is-disabled-on-this-system), run this line (don't worry, this only allows the current powershell process to bypass security):
 
     ```powershell
