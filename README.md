@@ -92,13 +92,13 @@ The powershell script `ConvertOneNote2MarkDown-v2.ps1` will utilize the OneNote 
     .\ConvertOneNote2MarkDown-v2.ps1 -Verbose
     ```
 
-    * If you see an error about scripts being blocked, run this line (don't worry, this only allows the current powershell process to bypass security):
+    * If you see an [error about scripts being blocked on the system](#error-file-convertonenote2markdownps1-cannot-be-loaded-because-running-scripts-is-disabled-on-this-system), run this line (don't worry, this only allows the current powershell process to bypass security):
 
     ```powershell
     Set-ExecutionPolicy Bypass -Scope Process -Force
     ```
 
-    * If you see any errors, check the [FAQ](#faq).
+    * If you see any other errors, check the [FAQ](#faq).
 1. If you chose to use a configuration file `config.ps1`, skip to the next step. If you did not choose to use a configuration file, the script will ask you for configuration interactively.
     * It starts off asking whether to do a dry run. This is useful for trying out different settings until you find one you like.
     * It will ask you for the path to store the markdown folder structure. Please use an empty folder. If using VS Code, you might not be able to paste the filepath - right click on the blinking cursor and it will paste from clipboard. Use a full absolute path.
@@ -179,6 +179,14 @@ A: If there are errors opening OneNote as Administrator, just open it normally w
 ### Q: Some notebooks are not detected / converted
 
 A: The script cannot detect notebooks which are not yet open in OneNote. Use `File > Open` in OneNote to open all OneNote notebooks that you want to convert, and ensure they are all fully synchronized before running the conversion. This applies to local OneNote notebooks and cloud OneNote notebooks (E.g. OneDrive or Microsoft Teams).
+
+### Error: `File ConvertOneNote2Markdown.ps1 cannot be loaded because running scripts is disabled on this system.`
+
+A: Windows disables Powershell (`.ps1`) scripts by default for security reasons. To allow running `.ps1` scripts temporarily only for the current Powershell session, run:
+
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force
+```
 
 ### Error: `Error HRESULT E_FAIL has been returned from a call to a COM component`
 
