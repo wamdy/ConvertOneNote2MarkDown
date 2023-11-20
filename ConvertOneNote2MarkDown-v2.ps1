@@ -1448,6 +1448,8 @@ Function Convert-OneNote2MarkDown {
         }else {
             Write-Error -Message $_.Exception.Message
             Write-Error -Message $_.ScriptStackTrace
+            "If you're seeing errors on the first run, check the FAQ in README.md to resolve them: " | Write-Host -ForegroundColor Yellow
+            "  https://github.com/theohbrothers/ConvertOneNote2MarkDown#faq" | Write-Host -ForegroundColor Yellow
         }
     }finally {
         'Cleaning up...' | Write-Host -ForegroundColor Cyan
