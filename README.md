@@ -186,6 +186,12 @@ A: If there are errors opening OneNote as Administrator, just open it normally w
 
 A: The script cannot detect notebooks which are not yet open in OneNote. Use `File > Open` in OneNote to open all OneNote notebooks that you want to convert, and ensure they are all fully synchronized before running the conversion. This applies to local OneNote notebooks and cloud OneNote notebooks (E.g. OneDrive or Microsoft Teams).
 
+### Q: Page attachments (files, images) are missing or corrupt during conversion
+
+Cause: Possible page content bug.
+
+A: Create a new section, copy pages into it, run the script again. See [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/183), which is similar to this [case](https://github.com/theohbrothers/ConvertOneNote2MarkDown/issues/112#issuecomment-986947168).
+
 ### Error: `File ConvertOneNote2Markdown.ps1 cannot be loaded because running scripts is disabled on this system.`
 
 A: Windows disables Powershell (`.ps1`) scripts by default for security reasons. To allow running `.ps1` scripts temporarily only for the current Powershell session, run:
