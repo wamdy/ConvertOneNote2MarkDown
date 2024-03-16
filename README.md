@@ -1,6 +1,6 @@
 # Convert OneNote to MarkDown
 
-[![github-actions](https://github.com/theohbrothers/ConvertOneNote2MarkDown/workflows/ci-master-pr/badge.svg)](https://github.com/theohbrothers/ConvertOneNote2MarkDown/actions)
+[![github-actions](https://github.com/theohbrothers/ConvertOneNote2MarkDown/actions/workflows/ci-master-pr.yml/badge.svg?branch=master)](https://github.com/theohbrothers/ConvertOneNote2MarkDown/actions/workflows/ci-master-pr.yml)
 [![github-release](https://img.shields.io/github/v/release/theohbrothers/ConvertOneNote2MarkDown?style=flat-square)](https://github.com/theohbrothers/ConvertOneNote2MarkDown/releases/)
 
 Ready to make the step to Markdown and saying farewell to your OneNote, EverNote or whatever proprietary note taking tool you are using? Nothing beats clear text, right? Read on!
