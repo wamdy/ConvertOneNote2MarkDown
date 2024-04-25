@@ -821,6 +821,12 @@ Function New-SectionGroupConversionConfig {
                             }
                             "$( $pathWithoutExtension | Truncate-PathFileName -Length ($config['mdFileNameAndFolderNameMaxLength']['value'] - 3) ).md" # Truncate to no more than 255 characters so we don't hit the file name limit on Windows / Linux
                         }
+                        # 如果已经存在同名文件，就不再生成
+                        if (Test-Path $pageCfg['filePathNormal']) {
+                            # 输出提示
+                            "File already exists: $( $pageCfg['filePathNormal'] )" | Write-Host -ForegroundColor DarkGray
+                            continue
+                        }
                         $pageCfg['filePathLong'] = "\\?\$( $pageCfg['filePathNormal'] )" # A non-Win32 path. Prefixing with '\\?\' allows Windows Powershell <= 5 (based on Win32) to support long absolute paths.
                         $pageCfg['filePath'] = if ($PSVersionTable.PSVersion.Major -le 5) {
                             $pageCfg['filePathLong'] # Add support for long paths on Powershell 5
