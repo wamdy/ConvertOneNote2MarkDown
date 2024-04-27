@@ -826,6 +826,11 @@ Function New-SectionGroupConversionConfig {
                             # 输出提示
                             "File already exists: $( $pageCfg['filePathNormal'] )" | Write-Host -ForegroundColor DarkGray
                             continue
+                        }else {
+                            # 创建一个文件，以便在下次失败之后，可以跳过，并在文件中写入内容：processing
+                            #创建空文件
+                            $pageCfg['filePathNormal'] | Write-Host -ForegroundColor Green
+                            New-Item -Path $pageCfg['filePathNormal'] -ItemType File -Force | Out-Null
                         }
                         $pageCfg['filePathLong'] = "\\?\$( $pageCfg['filePathNormal'] )" # A non-Win32 path. Prefixing with '\\?\' allows Windows Powershell <= 5 (based on Win32) to support long absolute paths.
                         $pageCfg['filePath'] = if ($PSVersionTable.PSVersion.Major -le 5) {
